@@ -1978,3 +1978,123 @@ This follow-up inspected pinned source and local package metadata only. No
 engine write, model download, package installation, new test palace, MCP server,
 memory benchmark or integrated workbench execution was run. Upstream test
 names and comments are design evidence, not successful local verification.
+
+## 20. Prime and DIVA evolution workflows revisited (2026-10-28)
+
+The owner requested a new research comparison before durable work. This changes
+the immediate research order, not the experiment's implementation scope. Prime
+evidence below is the existing local reference checkout at
+`c4c238ca025e382d96fb5f37e6328ca77fb82ef3`; it is not a claim about the current
+upstream head. DIVA evidence is the historical public Vivy host at
+`9cd2801f8090723a652d3e835f72d83715b82121` and its pinned Laputa at
+`0e0027c5f60ad67614d3613c2d5e21d567c4b412`. These are different dated snapshots,
+not an equal-time performance comparison. No original Vivy checkout, sessions,
+private databases, credentials or production data were used.
+
+### Prime: trajectory to supplemental harness state
+
+```mermaid
+flowchart TD
+    A[Task and conversation trajectory] --> T{Trigger}
+    T -->|User /refine| P
+    T -->|Agent refine.run via Python host bridge| B[Wait for turn boundary]
+    B --> P
+    T -->|Successful compaction| G[Enabled gate, cooldown, branch and busy checks]
+    G --> R[Model reviews whether a useful change is warranted]
+    R -->|No| N[No refinement]
+    R -->|Yes| P[Load trajectory, existing harness and history]
+    P --> Q[Model proposes small typed create/update/delete edits]
+    Q --> V[Parse and validate; re-read target and reject stale entries]
+    V --> W[Apply allowed edits to local or explicit global harness state]
+    W --> H[Persist before/after history and emit notice]
+    H --> L[Later agent context loads supplemental entries]
+    H --> RB[Explicit rollback can construct inverse edits]
+    L -. later task evidence .-> A
+```
+
+The automatic compact path includes an LLM reviewer before the refinement
+planner; that review is not a human approval. The self-requesting `refine` Skill
+is a Python-to-host interface, not the implementation of refinement itself.
+Automatic instructions target local entries and say not to promote globally
+without an explicit request. User/self-requested paths can explicitly choose
+global. The immutable base prompt is not rewritten. A harness Skill entry is a
+reference/description, not proof that a new executable Python package was created,
+installed or tested. A refinement may have no edits; errors and conflicting edits
+can prevent application. History and a rollback path record state changes; the
+proposed `expectedOutcome` is not a measured improvement.
+
+Source: [compact trigger and branch fence](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/crates/pa-core/src/session_engine/auto_refine_trigger.rs),
+[refinement execution and automatic gate](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/crates/pa-core/src/session_engine/refine.rs),
+[proposal validation and apply](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/crates/pa-core/src/refinement/planner.rs),
+and [Python Skill contract](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/skills/refine/SKILL.md).
+
+### DIVA: committed activity to typed effects
+
+```mermaid
+flowchart TD
+    A[Committed terminal primary-run activity] --> C[Capture evidence, stable source IDs and receipts]
+    C --> G[Watermark, policy, busy and blocked-state admission]
+    G -->|Eligible or manual request admitted| K[collect: bounded evidence window]
+    K --> P[prepare: bound evidence]
+    P --> R[reconcile: infer and apply scoped Work patch when present]
+    R -->|Unknown, rejected or apply error| X[Stop; preserve receipt and resolve uncertainty]
+    R -->|Continue| F[reflect: select eligible local Skill if relevant; produce typed candidates]
+    F -->|No change| Z[finish: no change]
+    F --> E[effects: route typed candidates to their host authorities]
+    E --> S[Skill proposal: stage exact revision and Review Center item]
+    S -->|Human approves and revision remains valid| SA[Apply Skill revision]
+    S -->|Reject, expire, cancel, stale or error| SN[Record outcome; do not apply]
+    E --> O[Other effects: memory, persona, capability or reflection note]
+    O --> OD[Each target authority decides its own effect outcome]
+    SA --> U[Later Skill reads use changed revision]
+    E --> H[finish: receipts, outcome and window resolution]
+    U -. later primary activity .-> A
+```
+
+The reconcile stage can write a bounded ACTMEM Work patch **before** reflection;
+it is not merely a candidate generator. Reflection itself only generates typed
+candidates. A Skill proposal is staged and requires human approval in this pinned
+host; this approval must not be generalized to every effect kind. Effects use
+operation IDs and payload digests: a matching committed receipt is reused, a
+conflict fails, and an unknown outcome blocks unsafe repetition. Host capture
+excludes supervisor bookkeeping and evolution inference as new primary evidence.
+The strategy can select an existing user-owned Skill for update or propose a new
+one when none fits; the review bridge validates the target/revision. The prior
+report's shorthand about updates should not be read as excluding new-Skill
+proposals. Approval is not evidence that the Skill improved real task performance.
+
+Source: [host trigger and durable watermark](https://github.com/ProjectViVy/agent-vivy/blob/9cd2801f8090723a652d3e835f72d83715b82121/internal/runtime/cognitive_service.go),
+[six stages, reconcile and receipts](https://github.com/ProjectViVy/laputa/blob/0e0027c5f60ad67614d3613c2d5e21d567c4b412/laputa/evolution/diva/strategy.go),
+[candidate and Skill-selection prompts](https://github.com/ProjectViVy/laputa/blob/0e0027c5f60ad67614d3613c2d5e21d567c4b412/laputa/evolution/diva/prompts.go),
+and [host Skill revision bridge](https://github.com/ProjectViVy/agent-vivy/blob/9cd2801f8090723a652d3e835f72d83715b82121/internal/runtime/cognitive_skill_proposal.go).
+
+### Comparison and implications for vivy-test
+
+| Question | Prime snapshot | DIVA plus historical Vivy host |
+| --- | --- | --- |
+| Input and trigger | Current trajectory; user/self request or gated compact-trigger review | Committed primary activity; persisted watermark and eligibility, also manual request |
+| Core operation | Propose small edits to supplemental harness state | Reconcile current Work, reflect into typed candidates, route effects |
+| Typical changed object | Prompt/memory/Skill reference/subagent or opt-in factory entry | Work patch, memory/persona effects, local Skill revision and other typed proposals |
+| Skill meaning | Harness reference/description; executable package lifecycle separate | Actual local Skill content proposal; staged then human-approved in this host |
+| Application authority | Validated edits can be applied automatically; user/self requests share the execution path | Per-effect host authority; Skill specifically requires review and approval |
+| Consistency/recovery | Re-read target, reject concurrent stale edits, record before/after and support rollback | Input watermark, stable operation IDs/receipts and explicit unresolved-outcome handling; Skill revisions have review recovery |
+| Evaluation | Expected outcome and history, not automatically measured quality | Evidence, rationale, receipts and approval, not automatically measured quality |
+
+These differ in their principal units of change and operational guarantees;
+neither is simply 'automatic reflection' versus 'manual reflection'. A concrete
+failure lesson illustrates the distinction: Prime may add a local harness
+memory or Skill reference for future context; DIVA may reconcile Work and propose
+an actual Skill revision supported by the evidence, which the host stages for
+approval. Both can legitimately do nothing. The dashed feedback arrows represent
+later use and new evidence, not an automatic benchmark or verified improvement.
+
+The existing decision remains Prime-format-first, automatic small changes and a
+focused persona extension, with content-appropriate checks. This comparison does
+not silently adopt DIVA's approval platform or host runtime. Questions for the
+next design round: which observations become reusable harness state; what is
+the authority for persona and MemPalace writes; how executable Skills are tested
+and adopted; which side effects need replay protection or review; and how actual
+outcomes and rollback will be assessed. In particular, executable Skill changes
+are separate from harness references and compiled recipe/plugin changes still
+need rebuild and validation. No implementation or performance conclusion follows
+from source inspection alone.
