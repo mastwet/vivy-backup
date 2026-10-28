@@ -2265,3 +2265,20 @@ reflection timed out; the report does not certify real positive persona activati
 or real-model Skill improvement. Those are historical records, not runs performed
 in this turn. The owner separately reported prior successful real usage; the
 specific behavior of that usage was not independently observed here.
+
+## 23. Owner decision: workspace-driven AutoDream (2026-10-29)
+
+Following the comparisons above, the owner chooses AutoDream as the new Vivy's
+evolution capability. A collection workflow supplies a dedicated evolution
+workspace. AutoDream uses a dedicated Dream prompt without the conversational
+persona to organize that material and generate Prime-style artifact candidates
+and persona data. Candidate generation is retained, and candidates take effect
+automatically; routine human approval is not the activation gate.
+
+This changes the earlier outside-Vivy/research-only direction without selecting
+Prime's refine/compaction-trigger route or migrating the old AutoDream runtime.
+The authoritative decision, remaining design questions and implementation
+boundaries are in [DESIGN's AutoDream decision](../DESIGN.md#autodream-evolution-decision-owner-2026-10-29).
+The evidence and comparisons in sections 20-22 remain historical research.
+No AutoDream code, activation behavior or new acceptance result is delivered
+by this documentation update.

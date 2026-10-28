@@ -1,5 +1,53 @@
 # Decisions and assembly direction
 
+## AutoDream evolution decision (owner, 2026-10-29)
+
+The new Vivy's evolution capability is named **AutoDream**. The owner selects
+a dedicated evolution workspace and automatic adoption of generated candidates.
+This is a new design, not a migration of the old AutoDream implementation.
+It supersedes earlier statements that new evolution belongs outside Vivy and
+that Prime-format-first is only an unselected research direction. The research
+in sections 20-22 of the workbench decisions report remains supporting evidence,
+not an implementation specification.
+
+The accepted flow is:
+
+1. A collection workflow deposits evolution data in a dedicated Vivy workspace.
+2. AutoDream runs with a dedicated Dream prompt, without Vivy's conversational
+   persona, and autonomously organizes and processes that workspace.
+3. It generates candidates for Prime-style reusable artifacts and persona data.
+   Candidate generation remains an explicit part of the evolution chain.
+4. Candidates are adopted automatically through the evolution chain. Human
+   approval of each candidate is not the normal activation gate; AutoDream does
+   not stop at producing proposals for an operator to apply.
+
+The Prime influence concerns the artifact-producing evolution approach; this
+decision does not select Prime's refine/compaction-trigger reflection route as
+the core workflow. Candidate generation and activation remain distinct steps
+even when both are automatic. Persona-free execution describes how Dream runs;
+persona data is still one of its intended outputs. Exact persona input and
+write boundaries remain to be specified.
+
+Artifact categories and schemas, collection sources, trigger/cadence, validation
+and automatic-adoption criteria, effective-version boundaries, failure/retry
+handling and rollback remain detailed design work. The discussion suggested
+reusable lessons, context additions and executable Skills as possible artifacts,
+and separating original evidence from generated candidates and adoption results;
+these suggestions are not a finalized artifact catalog or storage contract.
+Automatic activation is the agreed behavior, not evidence that every generated
+candidate is valid or improves later task performance. Validation must fit the
+artifact without silently reintroducing mandatory per-candidate human approval.
+
+The YAML recipe remains authoritative for compiled Rust components; runtime
+evolution does not bypass recipe changes, rebuilding or their verification.
+This decision does not itself grant new dependency-installation permissions or
+change the existing initialization consent scope. It introduces no requirement
+to copy DIVA's approval platform, Prime's Factory or model-weight training.
+
+Status: design decision recorded; no AutoDream implementation or runtime
+acceptance is delivered. Recording it does not start durable implementation or
+close the owner-deferred real-provider workbench acceptance gate.
+
 ## Automatic workbench preparation: agreed direction (2026-10-28)
 
 The owner chooses project-scoped remembered consent: after the first approval,

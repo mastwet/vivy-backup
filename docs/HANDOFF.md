@@ -1,5 +1,23 @@
 # Handoff: continue the independent assembly experiment
 
+## AutoDream decision checkpoint (2026-10-29)
+
+The owner selects AutoDream for the new Vivy's evolution chain: a collection
+workflow supplies a dedicated evolution workspace; a dedicated Dream prompt
+runs without Vivy's conversational persona, organizes the workspace and produces
+Prime-style artifact candidates plus persona data. Candidate generation remains;
+adoption is automatic, without routine human approval of each candidate. Do not
+reduce the implementation to proposal generation awaiting manual activation.
+
+Read DESIGN's **AutoDream evolution decision** before continuing evolution work.
+It supersedes the older outside-Vivy/research-only direction and does not select
+Prime's refine-trigger route or port the old AutoDream implementation. Exact
+artifacts, triggers, validation, adoption/version boundaries and recovery remain
+design work. Existing recipe compilation and initialization-consent boundaries
+remain in force. This checkpoint records a decision only: AutoDream is not yet
+implemented, and the deferred workbench provider gate and durable sequencing
+are unchanged.
+
 ## Initialization closure (2026-10-28)
 
 The approved plan is `docs/plans/2026-10-28-initialization.md`. Setup now registers
