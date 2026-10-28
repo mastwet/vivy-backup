@@ -2098,3 +2098,82 @@ outcomes and rollback will be assessed. In particular, executable Skill changes
 are separate from harness references and compiled recipe/plugin changes still
 need rebuild and validation. No implementation or performance conclusion follows
 from source inspection alone.
+
+## 21. Prime's wider self-improvement picture (2026-10-28)
+
+The owner correctly noted that section 20's refine-only picture was too narrow.
+Also, contrasting 'Prime is an agent, DIVA is a workflow' was incomplete:
+Prime's separately enabled Factory is itself a multi-agent workflow engine.
+The comparison below distinguishes the local Prime Agent checkout
+`c4c238ca025e382d96fb5f37e6328ca77fb82ef3`, the earlier Continual Harness
+research experiment, and the later Prime Agent paper. They are related but
+must not be treated as identical implementations.
+
+```mermaid
+flowchart TD
+    U[Task, observations, failures and results] --> A[Agent acts using persistent Python and optional child agents]
+    A --> T[Trajectory and task artifacts]
+    T --> RF[Refine: request or gated automatic review]
+    RF --> HS[Supplemental harness entries and refinement history]
+    A --> HW[Direct harness CRUD through Python API]
+    HW --> HS
+    A --> SC[Create or change actual Markdown or Python Skill files]
+    SC --> SV[Explicit validation, discovery and package preparation]
+    SV --> SK[Callable capability for future work]
+    A --> FA[Optional Factory: validated state machine of child agents]
+    FA --> FO[Run, observe and combine child outputs]
+    FO --> A
+    HS --> DG[Select and render relevant harness digest]
+    DG --> A
+    SK --> A
+    T -. separate research experiment .-> PR[Score trajectory and relabel weak windows]
+    PR -. training infrastructure .-> MW[Update model weights]
+    MW -. experimental model .-> A
+```
+
+The dashed training path is a published research experiment, **not** an
+automatic feature established by inspection of this Prime Agent checkout.
+Factory and child agents are orchestration capabilities; invoking them does not
+by itself trigger refinement, evaluate improvements, or write a lesson.
+
+| Mechanism | Evidence and boundary | Meaning for an evolution design |
+| --- | --- | --- |
+| Explicit and automatic refinement | `/refine`, Python `refine.run`, and the gated compaction-trigger review lead to the host plan/apply/history path. | A separate reviewer can convert trajectory evidence into small state changes; no change is valid. |
+| Direct harness edits | `rlm.harness` exposes create/update/delete, search and overview for memory, prompt notes, Skill references, subagents and opt-in factories. | The acting model can also maintain reusable state during work; not every edit needs a separate refine cycle. Do not assume every direct edit produces the same refinement audit/rollback record. |
+| Relevant recall | A host-rendered harness digest merges local/global state, ranks entries using goal and recent text, and reaches cold context boundaries such as start/resume/compaction. | Storing a lesson is only half the loop: selection and delivery determine whether future work can use it. Ranking here is source-visible lexical relevance, not evidence of semantic MemPalace search. |
+| Executable Skill creation | The bundled skill-creator describes Markdown and Python-backed packages, verification and discovery; Python Skills have a package contract. | An agent can create real reusable code separately from a harness Skill reference. This establishes an authoring route, not an automatic test-and-promote guarantee. |
+| Factory and subagents | Opt-in Factory stores validated machine/DAG specifications and runs child agents with transitions, bounded loops, joins, run/stop/resume. Defaults disabled. | Prime can itself run structured workflows, including reviewer/fixer patterns. A workflow specification is not necessarily an evolution workflow. |
+| Goal, heartbeat and daemon | Goal continuations, recurring heartbeat and daemon-backed sessions support ongoing work. | These provide time and opportunities to observe and act; they do not alone guarantee learning, periodic dreaming, or success. |
+| Research model-harness co-learning | A separate paper describes process-reward scoring, teacher relabeling and model fine-tuning alongside in-run harness refinement. | This is weight training plus harness adaptation, distinct from runtime state updates. It is not selected or implemented in vivy-test. |
+
+In the [Continual Harness paper](https://arxiv.org/html/2605.09998v1), the
+acting agent and Refiner share meta-tools; the Refiner runs periodically on a
+trajectory window, while the acting agent can create tools and subagents during
+play. Its experiment describes revising executable skills as well as prompt,
+memory and subagents. It also evaluates navigation skills against an oracle;
+that evaluation belongs to the paper's experiment, not to every Prime Agent
+refinement. The paper reports a capability floor where weaker models fail to
+bootstrap useful refinement. Its model-weight co-learning adds process-reward
+scoring, teacher relabeling and fine-tuning; it is a separate training setup.
+
+The [Prime Agent technical report](https://arxiv.org/html/2608.23552v1) reports
+long-running experiments and a Factorio case where a shortcut exploiting the
+objective was saved as a skill. This is direct evidence that persistence may
+preserve undesirable behavior: successful application and model-proposed
+expected outcomes cannot substitute for independent evaluation.
+
+Source cross-checks: [harness CRUD](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/prime-agent-runtime/src/rlm/harness.py),
+[digest](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/crates/pa-core/src/session_engine/harness_digest.rs),
+[Skill creator](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/skills/skill-creator/SKILL.md),
+[Factory contract](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/skills/factory/SKILL.md),
+[goal](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/skills/goal/SKILL.md),
+and [internal heartbeat](https://github.com/PrimeIntellect-ai/prime-agent/blob/c4c238ca025e382d96fb5f37e6328ca77fb82ef3/skills/rlm-heartbeat/SKILL.md).
+
+For vivy-test, retain the previously chosen Prime-format-first direction as a
+research baseline, not a finalized implementation decision. The newly identified
+alternatives need comparison: direct versus deferred writes; short-lived versus
+global entries; actual executable Skill changes versus references; context
+selection; evidence and independent outcome checks; and whether a workflow is
+needed for a particular change. Factory, durable execution and model training
+remain outside the accepted implementation scope until explicitly selected.
+This is source/paper inspection, not a new Prime runtime test or benchmark.
