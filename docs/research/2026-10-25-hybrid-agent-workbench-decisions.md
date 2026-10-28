@@ -2177,3 +2177,91 @@ selection; evidence and independent outcome checks; and whether a workflow is
 needed for a particular change. Factory, durable execution and model training
 remain outside the accepted implementation scope until explicitly selected.
 This is source/paper inspection, not a new Prime runtime test or benchmark.
+
+## 22. mysoul as an evolution-loop reference (2026-10-28)
+
+The owner asked to revisit mysoul, a separate Python single-subject experiment,
+for practical closed-loop ideas. The source worktree at
+`C:/Users/Administrator/.codex/worktrees/mysoul-v01/mysoul` has base revision
+`85c82c23536fa1896414cbb4c0e0d3f55201bb87` and pre-existing modified/untracked
+files. Findings describe the observed working tree, not just that commit; it was
+left untouched. Only source, tests and development records were inspected; no
+private sessions, live databases, credentials or production data were read.
+
+```mermaid
+flowchart TD
+    U[Owner interaction or bounded work] --> E[Capture source-linked interaction, results and failure evidence]
+    E --> P{Maintenance admitted?}
+    P -->|Idle, enabled, due and within budget| C[Collect a bounded uncovered evidence window]
+    C --> R[Reconcile: synthesize and publish versioned Recap]
+    R --> F[Reflect: typed evidence-citing persona changes or no change]
+    F --> PA[Apply allowed persona fields with version and epoch checks]
+    PA --> N[Future owner context reads committed Recap and persona]
+    E -->|Actionable work failure feedback| S[Propose revised Markdown work procedure]
+    S --> T[Run base and candidate on independent temporary cases]
+    T -->|Objective criteria pass and operator approves| A[Activate new Skill version for future tasks]
+    T -->|Fail or not approved| O[Retain current Skill]
+    A --> W[Next task uses selected Skill version]
+    A --> RB[Rollback affects future tasks]
+    N -. later interaction .-> U
+    W -. later feedback .-> E
+```
+
+The cognitive lane uses the same six stage names as the DIVA-style flow but
+implements its own Python service: collect/prepare, Recap reconciliation,
+persona reflection, effects and finish. Source windows retain coverage and
+provenance; no new input yields no new run. Persona reflection is a separate
+typed model call with an explicit no-change result. It can auto-apply supported
+identity/relationship/dark/world additions/user-observation changes with evidence,
+version and dispatch-epoch checks; Redline, Mission, Dream, public and owner-written
+USER are protected from that path. Model-inferred observations are labeled as
+such. Owner input or policy/version changes can supersede pending work; retries
+after a later failure preserve an already committed Recap.
+
+The Skill lane is a separate bounded Markdown procedure proposal. It requires
+evidence, compares the old and candidate procedures in fresh temporary workspaces
+against objective file/tool assertions, and requires operator approval before
+activation. The deterministic `ProcedureReplayModel` is a fixture: success with
+it does not prove a real model learned or that a generated executable package is
+safe. Objective candidate success is required, but the activation code does not
+require candidate performance to exceed the recorded baseline. Running tasks pin
+their earlier Skill version; activation/rollback affects future tasks. The source
+uses content hashes for its own revision/approval binding; this is an observation,
+not a proposal to adopt species hash enforcement in vivy-test.
+
+Useful ideas for a new Prime-style loop, as proposals rather than decisions:
+
+1. **Split experience by destination and authority.** Current-task Recap,
+   long-term MemPalace recall, persona observations, harness lessons and actual
+   Skill artifacts have different lifetimes and checks. A single reflection can
+   identify candidates without granting it authority to write all destinations.
+2. **Connect failure to a measurable next task.** Keep an evidence-linked failure
+   as a small reproducible case; evaluate a candidate and baseline on the same
+   objective assertions. Record the baseline and candidate independently; if an
+   improvement claim or auto-promotion depends on a relative gain, define that
+   rule explicitly. Avoid treating an LLM's favorable judgment as proof.
+3. **Freeze running-task inputs.** New persona/Skill versions apply at a declared
+   boundary; a running task and its rollback history retain their original
+   version. This complements the existing Python worker's next-cell adoption.
+4. **Make the loop economical.** Capture terminal outcomes once, avoid model
+   calls on empty evidence, combine cooldown/budgets with owner-work priority,
+   and record no-change as a valid outcome. Choose triggers by measured use.
+5. **Design recovery alongside reflection.** Reuse committed intermediate results,
+   preserve source windows, reject stale results and distinguish an unknown
+   external effect from a failed one. Only introduce durable machinery warranted
+   by the chosen acceptance case.
+
+Source references: mysoul `src/mysoul/cognition.py`, `persona.py`, `autonomy.py`,
+`skills.py`, `evolution.py`, `service.py`; `tests/e2e/test_full_cycle.py`,
+`test_skill_cycle.py`, `test_cognitive_cycle.py`, `test_auto_recap.py`; and
+`tests/integration/test_candidate_models.py`. This turn ran those five offline
+test files in a fresh temporary root: **12 passed in 3.01 seconds**. No live
+service, private data or external integration was touched.
+
+The project's historical `docs/validation.md` additionally records a real-provider
+six-stage no-change cognition run and a separate real-provider plus isolated
+MemPalace search/get/answer scenario. Its disposable real-provider positive-change
+reflection timed out; the report does not certify real positive persona activation
+or real-model Skill improvement. Those are historical records, not runs performed
+in this turn. The owner separately reported prior successful real usage; the
+specific behavior of that usage was not independently observed here.
