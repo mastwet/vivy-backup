@@ -6,6 +6,14 @@ how Prime and Pi store sessions and what the two Vivy harnesses should reuse.
 The current project is a Windows coding experiment; the durable harness and
 shared memory integration are not yet implemented.
 
+Decision update, 2026-10-31: the owner selects
+[Plan B](../DESIGN.md#plan-b-durable-execution-within-the-existing-rig-chain-owner-2026-10-31),
+adding durable execution within the existing Rust/Rig chain and validating it
+through the coding face. The comparisons below retain their original source
+scope and dates. They inform the detailed storage contract; they do not select
+a separate engine or establish newly tested recovery guarantees. Consult HANDOFF
+for later workbench/native-memory implementation status.
+
 ## Reference scope
 
 Historical comparison below: source checkouts inspected read-only. The

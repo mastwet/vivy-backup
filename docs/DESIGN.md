@@ -1,5 +1,87 @@
 # Decisions and assembly direction
 
+## Plan B: durable execution within the existing Rig chain (owner, 2026-10-31)
+
+**Status: selected architecture direction; detailed design and implementation
+pending.** The owner selects Plan B from the architecture alternatives. Complete
+one Vivy core by adding persistent execution phases, commit boundaries, recovery
+and sleep/wake behavior within the existing Rust/Rig execution chain. Validate
+through the current coding face. Durable execution is a general agent capability
+usable by coding and assistant workloads; their product entry points stay open.
+
+### Alternatives and rationale
+
+| Option | Approach | Decision |
+| --- | --- | --- |
+| A: task continuation | Preserve task goals/status and wake times around existing execution; interrupted work is suspended and later continued or replanned. | Not selected as the target: fast initial delivery, but coarse continuation alone does not establish phase-level recovery. |
+| B: durable execution in the current chain | Reuse Rig's model/tool execution, registration, session and UI facilities; add explicit persistent transitions and recovery control in that chain. | Selected: balance reuse and delivery speed with the required durable guarantees and maintenance cost. |
+| C: a Vivy-owned execution loop | Own a new minimal state machine and adapt reusable Rig model/tool capabilities and the coding face to it. | Not selected: greater control, with more execution and UI adaptation to implement and maintain. |
+
+Apply More, Fast, Good, Frugal through direct reuse and a bounded first acceptance
+case. These tradeoffs are source-based judgments, not measured delivery times or
+performance claims. Do not silently substitute A or C if an integration seam is
+insufficient; identify the concrete gap within Plan B first.
+
+### Reference responsibilities
+
+Pi durable is an agent execution runtime designed around persistence: it owns
+model/tool work, tasks, checkpoints, recovery, cancellation and durable waits.
+It is the semantic reference for this work, not a chat-history saving plugin or
+a requirement to import its TypeScript runtime. At inspected Pi revision
+`a14cdf90f0a76532f3e20bc3c01872837cef24ba`, the ordinary Pi coding CLI still uses
+pi-agent-core; it has no built-in durable-mode switch. See the
+[durable reference](https://github.com/earendil-works/pi/blob/a14cdf90f0a76532f3e20bc3c01872837cef24ba/packages/durable/README.md).
+
+Mysoul supplies behavior evidence for committed Recap, explicit bounded recall,
+subject-scheduled wakeups and silent outcomes. It does not supply the new Rust
+runtime or require copying its LangGraph/SQLite implementation, fatigue model
+or fixed activity categories. Laputa remains the persona authority; the agent
+owns Recap and task context. Full MemPalace remains the current long-term backend
+through the Python workbench. AutoDream uses the shared task infrastructure with
+its dedicated Dream prompt and validated automatic adoption, preserving its
+separate execution context and declared version-activation boundary.
+
+### Required execution boundary
+
+- Persist admitted input and task identity; retries must not admit the same
+  request twice. Keep task/checkpoint state separate from narrative Recap.
+- Preserve model results and tool intents before dependent work starts. Commit
+  tool results before allowing later steps to rely on them. Define one
+  authoritative commit boundary for related records; independently written
+  status and transcript files cannot both claim the transition is complete.
+- Recover from committed phases. Reuse confirmed results; rerun interrupted
+  calls only under an explicit replay-safe policy. Preserve uncertain external
+  outcomes rather than blindly retrying shell, Python, MCP or message sends.
+- Separate stopping a waiter from cancelling work. Persist cancellation state
+  so stale completions cannot advance cancelled or superseded work. Preserve
+  the accepted single-tool handoff boundary and human immediate interruption;
+  multiple pending tool calls need valid call/result pairing.
+- Persist sleep deadlines and resume positions. A live host timer or host wakeup
+  remains necessary. Waking gives the agent a decision opportunity; speaking is
+  optional. Do not add a model call merely to advance every mechanical step.
+- Keep JSON/JSONL as the storage direction, with commit framing, sync, ownership
+  and recovery details to design. Python namespaces remain ephemeral across
+  worker restart; explicit artifacts survive and arbitrary cells do not replay
+  automatically. Memory-engine internals retain their own storage authority.
+
+Rig at recipe revision `e1cd47d57f0bccb50ddffd6f45de2ac3365b271c` already exposes
+execution stages, interrupted-call recovery and a replaceable store. Its
+`rig-ecs/src/stage.rs` writes changing-tool intent before dispatch, but explicitly
+does not sync that write to disk; `rig-memory/src/writer.rs` flushes logs
+separately. These are useful seams, not proof of the selected durable contract.
+First verify control of tool start, result publication, recovery and next-step
+dispatch, including storage failure and cancellation, before broad rollout.
+
+The first acceptance slice is a model/tool task exercised through the current
+coding face, interrupted at selected phases and reopened: confirmed results are
+retained, uncertain actions are reported, and stale results cannot advance work.
+Then integrate persona/Recap/recall and a recoverable wakeup; AutoDream reuses the
+verified infrastructure. Exact APIs, record schemas, file layout, context refresh
+and implementation steps remain detailed design work. This decision delivers no
+code or new runtime evidence and does not close deferred real-provider checks.
+The official inbox, general DAG/distributed scheduling and product navigation
+are not prerequisites for the first slice; existing scope exclusions remain.
+
 ## Single Vivy core and infrastructure-first decision (owner, 2026-10-31)
 
 **Status: accepted direction.** The technical foundation is one Vivy core.
@@ -650,6 +732,7 @@ addition and its verification. This does not expand the parked Goal/evolution wo
 | Independent Rust test repository | No dependency on the original Vivy repository or its recovery work. |
 | YAML recipe and compile-time composition are the central experiment | The recipe determines selected plugin dependencies and static constructor calls. |
 | One Vivy core with explicit coding and durable lifecycle contracts | Complete shared agent infrastructure and verify its capabilities through the existing coding face; product entry points remain undecided. |
+| Plan B: durable execution within the existing Rig chain | Reuse the working Rust execution path and add persistent phases, commit/recovery control and wake behavior, anchored to Pi durable. |
 | Shared workspace and partitioned memory | Both paths use the same workspace; memory is organized by domain/topic, with persona owned by Laputa. |
 | Rig is the current coding implementation foundation | Reuse its existing execution, session and terminal components while completing the single Vivy core; use pi-durable to anchor persistent lifecycle behavior. |
 | Classic Pi is the coding reference; pi-durable is the durable reference | Coding preserves its interactive task/tool path; durable follows persistent task, checkpoint and wake semantics. |
@@ -969,13 +1052,18 @@ Research references and evidence for resuming this discussion:
   [MCP tools](https://mempalaceofficial.com/reference/mcp-tools). Pin and verify
   the chosen source/package rather than assuming current docs match a release.
 
-Open choices: the Rust durable implementation, the exact Prime runtime subset,
-the native MemPalace write/read seam, domain taxonomy and source-identity mapping,
+At this historical checkpoint, open choices included the Rust durable
+implementation, the exact Prime runtime subset, the native MemPalace write/read
+seam, domain taxonomy and source-identity mapping,
 and the durable harness's bounded initial acceptance case. Coding's initial
 real-task gate is accepted as recorded above. The remaining choices are not
 implemented decisions.
-Resume with those bounded choices; do not restart a full-platform or RLM parity
-effort. No product code, dependency or memory data was changed by this checkpoint.
+
+Update, 2026-10-31: the selected Plan B above now settles the durable architecture
+direction; current HANDOFF records later workbench and memory delivery. Resolve
+remaining details within those decisions, not this older open-choice list.
+Do not restart a full-platform or RLM parity effort. No product code, dependency
+or memory data was changed by this checkpoint.
 
 ## Hybrid architecture and first-stage boundary (2026-10-25 record)
 

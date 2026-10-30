@@ -1,5 +1,28 @@
 # Handoff: continue the independent assembly experiment
 
+## Plan B selected: extend the existing execution chain (2026-10-31)
+
+The owner selects DESIGN's
+[Plan B](DESIGN.md#plan-b-durable-execution-within-the-existing-rig-chain-owner-2026-10-31).
+Keep one Rust Vivy core and the existing Rig model/tool execution path; add
+persistent phases, commit boundaries, recovery, cancellation and sleep/wake
+semantics, using the current coding face for validation. Pi durable is a full
+agent execution runtime designed for persistence and is the semantic anchor,
+not a selected TypeScript dependency or a CLI mode to enable.
+
+Mysoul informs Recap, explicit recall, autonomous wake and silence. Preserve the
+accepted Laputa/persona, agent-owned task context, native MemPalace/workbench and
+AutoDream boundaries. JSON/JSONL remains the host storage direction. Product
+navigation and the official inbox schedule remain parked as recorded below.
+
+Next detail the minimal state/commit contract and verify the Rig seams for tool
+start, result publication, restart and cancellation. Existing Rig log flushes
+do not alone prove durable transactions or disk sync. Begin with one recoverable
+model/tool task, then context/memory and wake integration. Record remaining seam
+limitations explicitly; do not silently replace the selected route with coarse
+task continuation or a new execution loop. No implementation or new runtime
+verification is delivered by this decision commit.
+
 ## Current priority: one Vivy core, validate through Coding (2026-10-31)
 
 Read DESIGN's
