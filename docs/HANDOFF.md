@@ -1,5 +1,41 @@
 # Handoff: continue the independent assembly experiment
 
+## Detailed Plan B architecture proposed (2026-10-31)
+
+The owner requested detailed architecture after selecting Plan B. Read the
+[detailed proposal](DESIGN.md#detailed-architecture-proposal-2026-10-31) within
+the existing decision document. Plan B itself is accepted; the concrete state,
+storage and integration contracts are proposals for review, not implemented or
+new owner-approved guarantees.
+
+The proposed minimum adds a `vivy-durable` plugin to the existing Rig execution
+path. Reuse Rig's logical conversation logs and saved components; a framed
+JSONL `DurableStore` synchronizes each append and exposes precise receipts.
+Holds gate admission, dispatch, result settlement and continuation. Task state
+and recovery data share an agent-log commit. The first path serializes tools
+per agent to meet single-tool handoff and keeps unknown external outcomes
+explicit. A saved one-shot wake needs a running host for on-time execution.
+
+Later slices connect native Laputa, agent-owned Recap, existing MemPalace and
+AutoDream. Persona/context updates become effective at a new model operation;
+an interrupted operation retains its pinned context. The first AutoDream slice
+validates and automatically adopts persona/textual candidates. Product UI,
+official inbox, external adapters and background-service deployment stay outside
+the first infrastructure loop.
+
+Source inspection used the recipe's Rig pin
+`e1cd47d57f0bccb50ddffd6f45de2ac3365b271c`, not reference checkout HEAD. Required
+proof remains: holds surviving multi-pass execution until `Last/WriteLogs`,
+receipt/state matching, final redacted outcome capture, model-result recovery,
+cancel ordering and fail-closed durable-format detection on resume. The private
+flush/drain APIs mean a Store wrapper alone is insufficient. If the pinned public
+seams cannot support the contract, identify the smallest required Rig API change
+before expanding implementation; do not mutate the reference or silently change
+architecture. D0 verifies these seams through one coding task; D1-D3 close
+execution, context/memory and wake, then D4 evolution. See the proposal's
+acceptance table. No product code or new runtime/provider verification is
+delivered by this document update.
+
 ## Plan B selected: extend the existing execution chain (2026-10-31)
 
 The owner selects DESIGN's

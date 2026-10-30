@@ -2,10 +2,11 @@
 
 ## Plan B: durable execution within the existing Rig chain (owner, 2026-10-31)
 
-**Status: selected architecture direction; detailed design and implementation
-pending.** The owner selects Plan B from the architecture alternatives. Complete
-one Vivy core by adding persistent execution phases, commit boundaries, recovery
-and sleep/wake behavior within the existing Rust/Rig execution chain. Validate
+**Status: selected architecture direction; the detailed design below is proposed
+for review, and implementation is pending.** The owner selects Plan B from the
+architecture alternatives. Complete one Vivy core by adding persistent execution
+phases, commit boundaries, recovery and sleep/wake behavior within the existing
+Rust/Rig execution chain. Validate
 through the current coding face. Durable execution is a general agent capability
 usable by coding and assistant workloads; their product entry points stay open.
 
@@ -76,11 +77,442 @@ The first acceptance slice is a model/tool task exercised through the current
 coding face, interrupted at selected phases and reopened: confirmed results are
 retained, uncertain actions are reported, and stale results cannot advance work.
 Then integrate persona/Recap/recall and a recoverable wakeup; AutoDream reuses the
-verified infrastructure. Exact APIs, record schemas, file layout, context refresh
-and implementation steps remain detailed design work. This decision delivers no
-code or new runtime evidence and does not close deferred real-provider checks.
+verified infrastructure. The proposal below details the state, storage and
+context contracts; exact APIs and implementation steps remain engineering work.
+This decision delivers no code or new runtime evidence and does not close
+deferred real-provider checks.
 The official inbox, general DAG/distributed scheduling and product navigation
 are not prerequisites for the first slice; existing scope exclusions remain.
+
+### Detailed architecture proposal (2026-10-31)
+
+The owner requested detailed design after selecting B. The requirements above
+are accepted; the concrete contracts below are engineering proposals, not new
+owner rulings or implemented guarantees. The goal is one recoverable execution
+chain through the current coding face, followed by context/memory, wake and
+evolution integration. Product navigation remains outside this design.
+
+#### 1. Composition and ownership
+
+Keep Rig's existing agent loop, model adapters, tool registry, conversation
+format and host. Add one repository-owned `plugins/vivy-durable` crate with a
+`DurablePlugin`; initially keep its state, store, scheduling and Rig bindings as
+modules in that crate. A later small `vivy-laputa` plugin owns native persona
+operations. Extend `vivy-python` only where the existing workbench needs stable
+task identities or typed memory operations. No new provider stack, task service,
+plugin SDK or TypeScript runtime is required.
+
+```mermaid
+flowchart TD
+    A[Existing coding face / host input] --> B[Durable admission and handoff]
+    B --> C[Existing Rig model and tool execution]
+    C --> D[Commit and recovery gates]
+    D --> E[DurableStore: Rig logs plus saved task state]
+    E --> B
+    F[Laputa persona + agent context / Recap] --> C
+    C --> G[Existing Python workbench / MemPalace]
+    H[Host timer] --> B
+    I[AutoDream task with its own prompt] --> C
+    I --> F
+```
+
+The YAML recipe selects these compiled capabilities. A recipe without durable
+support continues using the existing execution chain with its existing storage
+contract. Settings configure selected capabilities, such as wake budgets; they
+do not replace compile-time selection. The first durable recipe reuses the
+coding face and tools. This is not a second assistant engine or a product-mode
+switch. Kernel persistence can work without Python or a memory backend.
+
+| Owner | Authority |
+| --- | --- |
+| Rig | Model/tool execution, tool registry, conversation semantics and existing host services |
+| Durable plugin | Admitted tasks, durable phase transitions, replay decisions, cancellation generations, wake records and commit gates |
+| Laputa plugin | One workspace persona source and controlled versioned updates |
+| Agent context code | Context composition, Recap, evidence budgets and compaction policy |
+| Python workbench / MemPalace | Worker resources and canonical long-term memory storage |
+| AutoDream workflow | Collection, candidate generation, validation and automatic adoption through the owners above |
+
+#### 2. Identity, state and the minimum control surface
+
+Use the persisted Rig agent ID scoped by session ID as `AgentKey`; an ECS
+`Entity` is only a live binding. Generate persistent `TaskId`, `InputId` and
+`WakeId` values at admission. An `OperationId` is `(TaskId, step, attempt)`;
+retain Rig tool-call/message IDs as mappings, not as substitutes for task
+identity. A retry has a new attempt while retaining the original logical step.
+Sessions created by fork receive fresh execution identities and no live timers.
+
+One `DurableAgentState` saved component under a stable schema key carries the
+agent's task records, ordered pending inputs, wake records and control revision.
+Use Rig's `ReflectSaved` mechanism with a stable `SavedKeys` name rather than
+depending on Rust type-path names on disk. Every state transition increments
+`state_revision`. An input retry with the same source/request key and identical
+payload returns the original task/receipt; changed payload is a conflict.
+Persist the deduplication data; process-local maps are insufficient.
+
+| Record | Minimum durable fields |
+| --- | --- |
+| Task | ID, agent, admitted input, parent if any, status, current step, generation, outcome/error, context references |
+| Operation | ID, Rig call mapping, kind, frozen request or argument reference, handler identity/version, replay policy, phase, result/error reference |
+| Input | ID, source/request key, payload digest and content/reference, target, arrival order, disposition |
+| Wake | ID, target task or agent, deadline in UTC, generation, reason, pending/fired/cancelled state |
+| Context reference | Persona revision, Recap revision, conversation boundary and immutable evidence references used by a model operation |
+
+Task statuses are `queued`, `running`, `waiting`, `suspended`, `completed`,
+`failed`, `cancelled`. Waiting means a saved deadline or an explicit dependency;
+suspended means a decision or reconciliation is required. An operation is
+`prepared`, `dispatched`, `settled`, `unknown` or `not_run`. An unknown external
+outcome is not a successful result or proof that the operation did nothing.
+Narrative Recap never substitutes for these fields.
+
+Internal Rust operations are `submit`, `cancel`, `schedule_wake`, `resolve` and
+`inspect`; names are provisional, and there is no generic public service API.
+The coding face uses these operations instead of admitting input outside the
+durable gate. An agent-facing `task_control` tool offers bounded actions:
+continue the active task, switch to an admitted task, defer a task, arrange a
+wake, or finish silently. It returns typed control records with expected task
+generation; arbitrary text is not parsed as a state transition. Ordinary final
+answers still finish through Rig's normal path. Requesting user input suspends
+the relevant task until a corresponding input is admitted.
+Control tools propose transitions; the host applies them after committing the
+control call's own result, so switching or finishing cannot orphan that call.
+Switch/defer/finish also close every unstarted sibling call with `not_run`,
+commit that complete batch, and only then change the active task or end its
+turn. They obey the same closed-batch rule as incoming-input handoff below.
+
+One foreground decision runs per agent. The initial durable path serializes
+that agent's tools in model-declared order. Existing parallel subagents remain
+separate agents; recoverable parent/child joins are a later acceptance slice,
+not an excuse to label existing in-memory delegation durable. Unsupported
+delegation in the first durable slice must fail before dispatch with a clear
+reason. Existing non-durable recipe behavior is preserved.
+
+#### 3. Storage and the actual commit unit
+
+Reuse Rig's logical logs and saved components. Implement a `DurableStore`
+behind `StoreOpener`, without a parallel task database. Each task checkpoint and
+the exact data needed to resume it must reside in the same **agent-log append**.
+Session listing metadata is derived. No invariant in the first slice requires
+an atomic write across an agent log, another agent log and the session log.
+Later joins refer to an already committed child's result before committing the
+parent's acceptance; an interrupted join is reconciled by identity.
+
+Proposed physical layout inside a newly created durable session:
+
+```text
+durable/format.json       # format/schema identity, created before use
+durable/writer.lock       # OS-held exclusive writer ownership
+durable/journal.jsonl     # authoritative framed Store operations
+files/blobs/...           # immutable, content-addressed referenced data
+```
+
+The journal implements Rig's logical log reads/appends/replacements. Each
+newline-terminated frame contains a versioned payload (sequence, operation,
+logical log, expected byte length, exact new log bytes) and a checksum of the
+exact payload bytes. A Rig append containing multiple JSONL records becomes
+one outer frame. A replacement is one frame as well; no in-place truncation of
+the committed logical log. Preserve `Store`'s expected-length conflict behavior
+and `Files` atomic-replacement contract. Do not buffer a successful Store call
+and pretend it has already produced a durable receipt.
+
+After writing a complete frame, synchronize the journal to the OS durability
+boundary before returning success. A receipt identifies the log's committed
+length, state revision when present, and journal sequence. Publish the new
+read view only after this succeeds. Referenced immutable blobs are written and
+synced before the referencing frame. On open, verify framing, checksums,
+sequence and expected lengths, then expose only the valid committed prefix to
+Rig. Set aside a final incomplete frame under writer ownership; interior
+corruption or a complete frame with an invalid checksum fails closed.
+A valid frame whose acknowledgement was lost may be present on reopen; callers
+reconcile stable IDs instead of assuming a reported write error means no commit.
+
+Store provider authentication as existing credential references, never resolved
+tokens. Frozen logical requests exclude transport credentials; tool adapters
+resolve admitted secret references only at dispatch. Known credential literals
+must not enter task checkpoints or collected evolution evidence. A call that
+cannot retain a safe, sufficient replay representation remains non-replayable.
+Session contents are private local runtime data, excluded from version control.
+
+Use one process writer per session and a process-local mutex for Store calls.
+An OS lock must reject a second writer and release on process death; a PID file
+alone is insufficient. Any append/sync failure poisons the live session for new
+execution until it is reopened and reconciled. Preserve the original cause.
+Session listing readers use derived metadata or a consistent committed view.
+This is local storage, without distributed locks or network-filesystem claims.
+
+This design requests synced commits, but process-kill tests do not certify
+power-loss durability. File creation, replacement and directory metadata
+durability need a Windows-specific implementation and evidence. State the
+tested filesystem/platform limits. Start with whole-log reads as Rig already
+uses; measure journal growth, reopen time and sync cost before adding snapshots,
+segmentation, background compaction or group commit. No per-token disk sync.
+
+#### 4. Binding persistence to Rig execution
+
+The binding uses holds and receipts around Rig's loop. It does not implement
+another model/tool loop. A gate's permission applies only to an exact operation,
+request digest, generation and committed revision. Changed requests lose that
+permission and require a new checkpoint.
+
+1. **Admit.** Hold incoming work, save its input, deduplication key and task
+   state, then release only after the receipt. Input shown as pending in the
+   terminal is not yet an admission acknowledgement.
+2. **Prepare execution.** After request composition/routing, freeze the model
+   request or tool arguments and context references. Save dispatch intent and
+   replay policy with the task state. Hold the call until that state revision
+   has a receipt. Persist intent for read-only calls too.
+3. **Start.** Recheck generation and cancellation at dispatch. Rig invokes its
+   existing handler once the gate releases. A committed intent followed by a
+   crash can mean the call never actually started; an unsafe call is still
+   treated as potentially executed.
+4. **Receive result.** Review/redact the final outcome, store the exact result
+   needed for replay plus the task transition, and hold settlement until its
+   receipt. A transient ECS outcome or visible stream is not the commit.
+5. **Publish and continue.** Release the result for Rig's conversation update.
+   Before the next operation starts, require a checkpoint that includes that
+   conversation change, the task's next phase and required result references.
+   Then release the next gate. A final task completion also waits for its
+   receipt before the UI reports durable completion.
+
+Steps 4 and 5 deliberately allow a durable result to precede its transcript
+projection. The saved result is authoritative; restart can finish publication
+without rerunning the effect. Do not declare completion based on two unrelated
+files or two independently updated copies of task status. Stream deltas may
+appear provisionally; a terminal completion indicator requires committed state.
+Local UI display is not an exactly-once external-message-delivery guarantee.
+
+The intended scheduling seam is to retain holds through the current AgentPass,
+update saved components before `Last/SaveSystems`, let `Last/WriteLogs` flush,
+check receipts after `WriteLogs`, and release only in a later frame. The Store
+must inspect the appended stable state key and conversation boundary, not merely
+report that *some* append succeeded. `ConversationChanged` is a queued-change
+notification and `SessionLog::has_written` is not a checkpoint receipt.
+
+| Pinned Rig seam inspected | Integration requirement still to prove |
+| --- | --- |
+| `PrepareSystems`, `Stage::Gate`, `HoldOf`, `Decision` | Freeze the final effective request and prevent all dispatch, including successor/retry calls, before the receipt |
+| `ReviewSystems::{Edit,Act}`, result/turn holds | Capture the final redacted outcome and prevent settlement, final-answer completion and later work until committed |
+| `ReflectSaved`, `SaveSystems`, `WriteLogs` | Task state and required conversation changes reach the same agent-log append; serialization failure cannot look like success |
+| `StoreOpener::new`, `Store` | Install the framed store for new/opened sessions, preserve store contracts, expose precise receipts and writer ownership |
+| `Interrupted::{Started,Settled}` and `Restored` | Rebind stable operation IDs, restore saved model/tool outcomes, and hold recovery before default fallback or automatic continuation |
+| `StopTurn` and Python worker stop | Persist cancellation, fence late completions and clean owned resources without relying on an unsaved observer order |
+
+These are source-inspected opportunities, not successful integration tests.
+At pinned Rig `e1cd47d57f0bccb50ddffd6f45de2ac3365b271c`, `SessionLog::flush`
+and conversation draining are crate-private; saved components normally flush in
+`Last`. The kernel can advance multiple passes in one frame. It also redacts
+results when entering Commit after plugin Review, so the capture point must
+use the same redaction policy and prove no later mutation bypasses the saved
+digest. A Store wrapper alone cannot establish all these guarantees.
+If public holds/orderings cannot satisfy a required seam, report the exact
+missing hook and propose a bounded Rig API extension with a deliberate pin
+update. Do not mutate the reference checkout, copy the kernel, or replace B
+with task-only continuation. The first implementation slice must settle this
+before the rest of the design is advertised as feasible on the current pin.
+
+#### 5. Recovery, replay and cancellation
+
+On open: acquire ownership, validate the storage and required state schemas,
+restore committed logs/state, rebind IDs, reconcile operations, then admit new
+execution. Incompatible or missing durable state is an open failure, not a
+default empty task component. Verify the recipe has the required compiled
+capabilities and the workspace identity still matches; missing tools/providers
+suspend affected tasks with an actionable cause.
+
+| Last committed condition | Recovery action |
+| --- | --- |
+| Input/task queued; no dispatch intent | Resume admission once, using the existing task ID |
+| Model intent without committed result | Start a new recorded attempt under a bounded retry policy using the frozen logical input; interrupted stream is provisional |
+| Tool intent without committed result | Replay only when both recorded and current handler contracts permit it; otherwise mark unknown and suspend dependent work |
+| Result saved; transcript not yet published | Supply the saved outcome to Rig and finish publication, with no external call |
+| Result and next checkpoint saved | Continue from that checkpoint and reuse prior results |
+| Cancel requested or generation superseded | Reconcile late outcomes, finish cleanup, and never dispatch the old continuation |
+| Waiting with deadline | Re-arm the host timer or enqueue the overdue wake once |
+
+Default tool replay is unsafe. A read-only declaration alone is not a replay
+contract: credentials, remote state and handler versions may change. Explicitly
+safe handlers may be retried under their recorded policy and current permission;
+idempotent handlers require a stable external idempotency key or a verifiable
+receipt. Model retries may incur another request/charge and produce a different
+answer; internal thoughts or an interrupted token stream are not resumed.
+Persist attempt counts and backoff deadlines; the initial model budget is one
+recovery retry before suspension, configurable without weakening tool policy.
+
+Unknown effects may be resolved by reading an authoritative external receipt,
+checking their actual result, or obtaining a user decision. The agent may
+perform non-mutating reconciliation; it must not silently resend the original
+effect. Preserve the original unknown record alongside the resolution evidence.
+Failures known to occur before dispatch and failures with uncertain side effects
+must be different structured outcomes.
+
+Before model-assisted reconciliation, publish an explicit uncertainty result
+for the original provider tool-call ID and `not_run` results for its unstarted
+siblings, then commit the closed batch. The original operation remains `unknown`
+in task state even though its transcript call now has a result. A new model
+operation on the same agent, with purpose `reconcile`, may use only admitted
+non-mutating inspection tools and typed resolution/control actions; dependent
+mutating work stays suspended. Resolution saves evidence and the chosen outcome
+before normal execution resumes. A user may instead abandon the task while
+retaining the unresolved operation. No new call is presented as the old call's
+successful replay.
+
+Cancellation first prevents further dispatch and requests immediate termination
+of owned live work; it then persists the cancellation generation and outcome.
+Only the durable receipt acknowledges a saved cancellation. If storage fails,
+stop locally, report cancellation as unsaved, and require reconciliation on
+reopen. No protocol can promise a cancel survived a crash before being stored.
+Reject late results as continuations by `(TaskId, generation, OperationId)`,
+while retaining evidence of an external effect that actually finished. Cancelling
+a UI waiter or closing a view does not cancel a task. In this first local host,
+exiting the process checkpoints/suspends tasks and stops owned workers; it is
+not a promise that they keep executing without a host.
+
+#### 6. Single-tool handoff and new input
+
+Persist incoming messages while the current operation runs. With no pending
+input, complete the normal next step. With pending input, stop dispatching sibling
+calls after the current tool result commits and give the agent the pending
+input and saved task state. If input arrives during model generation, admit it
+at the next committed model boundary before starting new tools. Idle agents can
+decide immediately. No model call is needed merely to acknowledge a receipt.
+
+To keep provider transcripts valid when a reply requested several tools, commit
+explicit `not_run` results for the siblings that have not started before the
+handoff decision call. Their reason is yielding to new input, not tool failure.
+Those call IDs are closed; continuing the old plan requires freshly issued calls
+after the agent's decision. Do not resume a closed call ID or insert a new model
+turn into an unresolved tool-call batch. The initial per-agent serialization
+avoids pretending that an already running sibling can be undone.
+
+The agent chooses continue, switch, defer, ask the user, or finish. An explicit
+human immediate-interruption command follows the cancellation path above.
+The pending-input records are the minimum execution queue; the deferred official
+inbox, hook subscriptions, mail browsing and external channel adapters are not
+implemented by this queue. Later hooks submit the same typed inputs.
+
+#### 7. Persona, Recap and memory integration
+
+Proposed native persona storage is one versioned workspace `persona.json`, with
+`schema_version`, `persona_id`, `revision`, `text`, `last_update_id` and source
+references. Laputa exposes read and compare-and-swap update operations. Updates
+validate the expected revision, write/sync a replacement, then atomically publish
+it under an OS writer lock. An interrupted update is reconciled by update ID and
+revision. Tasks record the observed revision, not a second mutable persona copy.
+The exact bytes used by an in-flight model request are part of its checkpoint.
+
+The model composer puts the persona block at the application's top-level
+persona position, with host/tool rules and project context explicitly composed.
+Existing trusted `SYSTEM.md` customization needs one defined composition point;
+it must not silently create another persona authority. Persona activates at the
+next *new* model operation, never halfway through a request. A retry of an old
+operation uses its pinned context; deliberate replanning creates a new step.
+AutoDream uses its separate Dream prompt without the conversational persona.
+
+Recap is agent-owned saved state: revision, covered conversation boundary,
+summary, current goal and evidence references. Update it only against the
+expected source boundary; discard/recompute a stale candidate. Preserve current
+tool-call/result pairs until closed. Keep the existing coding context/compaction
+policy as the initial policy. The mysoul-inspired compact policy can later use
+persona + committed Recap + active task + bounded selected evidence. These
+policies share an execution engine and must not create two Recap authorities.
+
+Keep MemPalace's existing `remember/get/search` API. Start with explicit bounded
+recall and explicit useful memory writes; neither every token nor every turn
+requires retrieval. A typed workbench memory operation may wrap the existing
+facade when recovery needs stable arguments; arbitrary Python cells remain
+unsafe to replay. Use stable workspace/source and task/event keys for writes,
+and reconcile with `get(source_id, event_id)` after interruption. Same-key
+different-content conflicts and incomplete chunk records require resolution;
+the existing facade already exposes these cases. Do not turn all memory failures
+into automatic retries. Corrections use new events with source references.
+
+Memory ingestion can be a small follow-up task: its failure leaves ingestion
+pending without undoing a successfully completed coding task. MemPalace remains
+its own storage authority; there is no distributed transaction with the task
+journal and no mirrored memory database. A source ID or partition is not an ACL.
+Worker restart creates a fresh Python namespace and reconnects admitted resources;
+stable artifacts and memory survive, live Python variables do not. Durable
+bindings must not fall back to `Entity` or the string `unsaved` as storage IDs.
+
+#### 8. Sleep, wake and host lifetime
+
+Save a one-shot wake with its task transition to `waiting`. The local host arms
+one timer for the earliest deadline and rechecks persisted generations on fire.
+Committing `WakeFired` and its queued input occurs in the same agent checkpoint.
+Repeated timer callbacks use the wake ID as the input deduplication key. The wake
+decision may act, ask, reschedule, or finish silently; no user-visible message is
+required. If the agent is busy, the wake waits for the normal handoff boundary.
+
+On startup, enqueue each still-valid overdue one-shot wake once. Replacing or
+cancelling a schedule changes its generation so an old timer cannot revive it.
+Use stored UTC deadlines and recheck wall time after monotonic waits; no cron,
+catch-up burst or distributed scheduling in the first slice. Self-scheduled
+wakeups have a host-configured minimum delay and per-task action/model budget.
+Exhaustion suspends autonomous work with a recorded reason.
+
+The host must remain running for an on-time wake. A stopped computer/process
+executes overdue work only after restart. A background service, detached daemon,
+OS boot scheduling and reattachment UI are later deployment choices. Persistent
+state, an available host and a continuously running model are distinct concerns.
+
+#### 9. Evolution on the same infrastructure
+
+After execution/context/wake acceptance, AutoDream runs as a task with a distinct
+agent context and Dream prompt. A bounded collection task writes immutable
+source references and selected evidence into its dedicated workspace. Source
+events, candidates, validation results and adoption receipts remain distinguishable;
+do not collect recalled material again as fresh experience by default.
+
+The first evolution slice handles persona candidates and reusable textual
+lessons. Candidates name base revisions and evidence. Validate schema, scope,
+size, applicability and preservation of required constraints, then automatically
+apply valid candidates through Laputa or the memory owner. Reject or regenerate
+stale candidates. Routine per-candidate human approval is not an activation gate.
+Task records retain the effective revision and failure reason. Persona rollback
+is a new checked revision, not history deletion. Mixed-backend adoptions are
+separate recorded operations, not an invented atomic update across all stores.
+Executable Skill candidates require their own validation before later inclusion;
+the initial textual slice is not proof of general self-modifying-code safety or
+of measured improvement in agent quality.
+
+#### 10. Compatibility, acceptance and remaining engineering choices
+
+New durable sessions are the first target. Keep existing sessions readable in
+their existing format; do not auto-convert active sessions. A later explicit
+import can seed a durable session from a completed conversation without claiming
+that past effects have recoverable execution records. A durable-format session
+opened without compiled durable support must fail clearly, including through
+the launcher's and coding face's resume paths; it must never look like an empty
+legacy session. Fork/rewind must create a new execution lineage with no copied
+pending task, cancellation generation or wake. Until this is verified, refuse
+those mutations for durable sessions before changing data. Context compaction
+must preserve the task checkpoints and required active call pairs.
+
+| Slice | Acceptance evidence |
+| --- | --- |
+| D0: Rig binding and store | One model/tool task through the coding face; observe holds/receipts at actual pinned integration points; reject an incompatible resume and a second writer; retain legacy recipe behavior |
+| D1: execution recovery | Kill before/after intent, after external effect but before result, after result commit but before publication, and after final commit; prove reuse, unknown outcomes, admission deduplication and no duplicate unsafe call |
+| D1: control/failure | Inject append/sync/serialization errors, torn tail and corruption; cancel with late results; introduce new input between two requested tools; inspect valid tool-call/result pairing and worker cleanup |
+| D2: context and memory | Inspect actual model requests for persona revisions and Recap coverage; restart and recall written evidence; reconcile a repeated/incomplete memory write and a missing Python namespace |
+| D3: wake | Restart before/after a deadline, duplicate callback, replace/cancel deadline, wake while busy, silent outcome and exhausted budget |
+| D4: evolution | Evidence collected once, candidate validated, automatic adoption recorded, next new request uses the adopted version, stale update rejected and rollback exercised |
+
+D1-D3 form the first persistent-agent infrastructure loop. D4 closes the agreed
+learning/evolution loop. Use synthetic data and deterministic offline models
+for failure injection, then the existing coding face with a configured real
+provider for the joint path. The prior workbench real-provider acceptance is
+still deferred; source inspection and scripted gateways do not close it. Add
+focused checks as each behavior is implemented, without making every later
+integration a prerequisite for D0.
+
+Before implementation, the builder must verify the D0 seams, choose exact
+serialization/helper libraries compatible with the pinned Rust toolchain, and
+specify bounded payload/queue/budget defaults with errors. Those are engineering
+choices within this proposal. API naming, module splits and future indexing are
+not user-facing architectural decisions. The source-level risks still requiring
+proof are receipt-aware scheduling, final-outcome capture after redaction,
+model-result recovery, cancellation ordering, and durable-format detection in
+all resume paths. This document delivers design only; no Rust implementation,
+crash test, performance measurement or new provider verification accompanies it.
 
 ## Single Vivy core and infrastructure-first decision (owner, 2026-10-31)
 
