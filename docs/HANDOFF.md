@@ -1,5 +1,17 @@
 # Handoff: continue the independent assembly experiment
 
+## Inbox scheduling checkpoint (2026-10-31)
+
+The owner defers the official inbox plugin and its notification/hook and durable-
+agent integration to a later phase, outside the immediate implementation stage.
+Keep the accepted behavior in DESIGN's
+[Inbox and event handoff decision](DESIGN.md#inbox-and-event-handoff-decision-owner-2026-10-31),
+but do not start it or make it a nearest-stage gate. Pending messages survive
+restarts; the agent chooses reading/deletion/reply and controls reminder hooks.
+Ordinary hook/chat/new-task handoff waits for one tool execution to finish, then
+the agent decides what to do; humans retain explicit immediate interruption.
+No implementation date, exact later-phase order or full swarm runtime is selected.
+
 ## PEN, NeuroLink and Minecraft decision checkpoint (2026-10-30)
 
 The owner locks the positioning in DESIGN's
@@ -25,8 +37,11 @@ Octos replaces the earlier ZeroClaw candidate. The inspected channel boundary is
 also contains session/cron facilities beyond the selected port. Read DESIGN's
 **Channel packages: port Octos and load through NeuroLink** for the source links
 and scope. This selects channel reuse, not Octos's agent runtime or OUP. Package
-extraction/loading details and the first platform subset remain open; no port,
-build or runtime acceptance is delivered.
+extraction/loading details remain open; no port, build or runtime acceptance is
+delivered. Owner refinement, 2026-10-31: only the official QQ Bot channel is
+selected from Octos. NapCat QQ is a separate actively browsable PEN capability,
+using NapCat/NTQQ's existing data rather than a second mirrored QQ database.
+Read DESIGN's NapCat section before treating it as another passive channel.
 
 This is a documentation-only decision checkpoint: no PEN/NeuroLink/Minecraft
 runtime is delivered. Recipe-selected compilation, existing setup/trust rules,

@@ -1,5 +1,45 @@
 # Decisions and assembly direction
 
+## Inbox and event handoff decision (owner, 2026-10-31)
+
+**Schedule: later phase, outside the immediate implementation stage.** Retain
+the agreed direction below for the official inbox plugin and its notification/
+durable-agent integration. Do not start implementation or make it a prerequisite
+of the nearest stage. No delivery date or exact later-phase order is selected.
+This scheduling decision does not independently reschedule all PEN/NeuroLink work.
+
+The inbox is an official plugin for asynchronous delivery and deferred handling.
+Messages and pending handling state must survive Vivy restarts, including messages
+from internal agents. Email, scheduled news results, QQ notifications and eventual
+agent/swarm cooperation can use this capability. Swarm reuse is a possible
+consumer, not a selection of a swarm runtime or orchestration system.
+
+The main agent decides whether and when to read, handle, reply to or delete inbox
+items. Delivery can simply leave an item in the inbox without interrupting the
+agent. Scheduled work and background completion hooks remain ordinary trigger
+sources; storing a task result and waking an agent are separate actions. Execution,
+waiting and task recovery remain responsibilities of Vivy's execution layer.
+
+The agent may autonomously enable or disable notification hooks. Private messages
+from the owner and outsiders may both participate, with sender identity retained.
+Handling a notification may involve only tool calls and no user-visible reply;
+external sending must be explicit rather than automatic forwarding of internal
+model text or completion summaries. Asking the owner before changing work is an
+agent decision, not a mandatory approval for every hook.
+
+**Default handoff boundary: completion of a single tool execution.** Hook events,
+chat-window steering messages and new task inputs wait for the current tool to
+finish. Before the next agent decision, present the completed tool result and
+pending inputs so the agent can continue, switch, defer or ask the owner. Do not
+wait for the entire programming/game objective or automatically kill the running
+tool. A human's explicit immediate interruption remains a separate cancellation
+path. Resource cleanup and execution control belong to the host, not NeuroLink.
+
+Detailed message schemas, addressing, persistence format, inbox deletion versus
+source deletion, parallel-call handoff and exact tool APIs remain later design
+work. This record adds no inbox, new wake/cron implementation, tool-only completion
+adapter or durable runtime, and does not change current coding cancellation.
+
 ## PEN and NeuroLink decision (owner, 2026-10-30)
 
 **Status: locked owner decision; implementation pending.** PEN and NeuroLink
@@ -83,9 +123,12 @@ adapting the channel-package capability. NeuroLink is the loading and integratio
 entry for the resulting channel packages. This replaces the earlier ZeroClaw
 candidate; donor selection is closed unless the owner explicitly changes it.
 
-The selected scope is Octos's channel implementations and the shared support
-needed to adapt them to Vivy. It does not select Octos's agent kernel, model
-providers, sessions, scheduler or OUP as Vivy's runtime/protocol. The NeuroLink
+Owner refinement, 2026-10-31: port **only the official QQ Bot channel** and the
+shared support needed to adapt it. Other Octos channel implementations are not
+selected. The relevant implementation is
+[`qq_bot_channel.rs`](https://github.com/octos-org/octos/blob/7486f3df54b5803ec4095c60b244617c9d254750/crates/octos-bus/src/qq_bot_channel.rs).
+This does not select Octos's agent kernel, model providers, sessions, scheduler
+or OUP as Vivy's runtime/protocol. The NeuroLink
 host implementation loads and connects the adapted packages, translates inbound
 messages/events and routes outbound exchanges to the channel implementation.
 Actual execution and resource ownership remain with the responsible host/module;
@@ -105,13 +148,30 @@ The inspected source is Octos commit
 
 Here, `channel-package` names the intended Vivy integration unit; source
 inspection does not establish an upstream standalone package that NeuroLink can
-already load unchanged. The exact extraction/adapter boundary, package format,
-loading API and first platform subset remain engineering work. Native Rust
-components still follow recipe selection and rebuilding; "load through
+already load unchanged. The exact extraction/adapter boundary, package format
+and loading API remain engineering work; official QQ is the selected platform.
+Native Rust components still follow recipe selection and rebuilding; "load through
 NeuroLink" does not by itself select dynamic-library hot-loading.
 
 No Octos code was cloned, ported, built or run for this decision. Source
 inspection is not channel compatibility, lifecycle or platform acceptance.
+
+### NapCat QQ: an actively browsable capability
+
+Separately from the official QQ channel, retain a NapCat QQ interface as a PEN
+capability: an agent's "phone" for actively examining QQ rather than only reacting
+to inbound messages. Initial needs are viewing new messages, ignoring group
+messages or filtering specified groups, reading a selected group's history, and
+distinguishing the owner's identity from outsiders. The agent can choose whether
+to reply when notified; notification hooks are agent-controlled.
+
+Prefer NapCat/NTQQ's existing data and query interfaces instead of maintaining
+another mirrored QQ-message database in Vivy. MCP is a possible access interface,
+not a selected custom protocol. Actual history/search coverage, pagination,
+identity binding, installed NapCat variant and any existing MCP adapter still
+need verification. The future inbox's own pending-message/handling state is a
+separate concern from copying all QQ history. Its delivery timing is governed
+by the later-phase inbox decision above.
 
 ### First game: Minecraft, independent multiplayer first
 

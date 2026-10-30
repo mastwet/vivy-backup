@@ -16,6 +16,13 @@ the first game. Relevant scope rows below reflect that update;
 other target statuses remain the dated inventory, not a fresh implementation
 audit. Consult HANDOFF for subsequent workbench delivery evidence.
 
+Owner update, 2026-10-31: the official inbox plugin and associated hook/durable-
+agent handoff are deferred beyond the immediate stage; see DESIGN's
+[inbox decision](../DESIGN.md#inbox-and-event-handoff-decision-owner-2026-10-31).
+Octos reuse is now limited to official QQ, with NapCat QQ separately selected
+for active browsing using its existing data interfaces. These are scope and
+schedule decisions, not implementation evidence.
+
 ## How to read the matrix
 
 The **scope** column describes decisions actually made for the new Vivy:
@@ -164,6 +171,7 @@ does not establish a selected server in either Go main/stable or vivy-test.
 | Skill marketplace / package download and updates | G1 marketplace RPC | Decide | No | Installing a bundle, discovering a skill and an online marketplace are distinct. |
 | Prompt templates and slash commands | N1 templates | Keep | Yes | Current coding path provides Pi-style Markdown templates. |
 | Lifecycle hooks / external script hooks | G1 `hooks*.go`; G5 #13 | Keep | Reference | Rig corpus supplies a candidate, not a selected plugin. Need actual events and process handling. |
+| Official persistent inbox and notification hooks | Owner, 2026-10-31 | Keep | No | Later phase, outside the immediate stage. Agent-controlled reminders; pending messages survive restart. Normal handoff follows one tool completion; explicit human interruption remains immediate. Swarm reuse is a possible consumer. |
 | Capability-level hooks inside Python execution | N5 host callback | Decide | No | An outer `python_repl` hook cannot see each internal library operation. |
 | Hook format compatibility and verified webhook dispatch | G5 #13 | Decide | No | Old issue delivered research; actual format/transport choice remains open. |
 | Tool execution approval / editable review | G1 policy/approval/review | Decide | Partial | Plan review and project trust exist; full effectful-tool HITL parity is not established. |
@@ -187,8 +195,9 @@ does not establish a selected server in either Go main/stable or vivy-test.
 | Native desktop/Wails product | G5 #31; Go feature records | Decide | No | Original product/release work is separate; no assumed reuse of its app shell. |
 | TUI interactive coding and task progress | G1 `sdk/tui`; N1 | Keep | Yes | Current compact Rig TUI exists; detailed old UI/theme/keybinding parity is partial. |
 | Print/JSON/headless modes | G1 face; N1 | Keep | Yes | Existing Rig JSON events are not full legacy wire compatibility. |
-| Channel packages ported from Octos and loaded through NeuroLink | Owner final ruling, 2026-10-30; pinned Octos `7486f3df` | Keep | No | Donor and loading entry are selected. Exact port boundary, loading contract and first platform subset remain open; Octos runtime/OUP adoption is not selected. |
-| QQ channel as an initial external channel | G1 `plugins/qq`, channel host | Decide | No | Earlier first-phase candidate; NeuroLink now has broader conversation/event scope. The exact QQ surface and delivery selection remain open. |
+| Channel packages ported from Octos and loaded through NeuroLink | Owner final ruling, 2026-10-30; refined 2026-10-31; pinned Octos `7486f3df` | Keep | No | Only official QQ is selected. Exact port/loading contract remains open; Octos runtime/OUP adoption is not selected. |
+| Official QQ Bot channel | Owner, 2026-10-31; Octos `qq_bot_channel.rs` | Keep | No | Port the official QQ implementation from Octos and load through NeuroLink; other Octos channels are unselected. |
+| NapCat QQ active browsing / agent phone | Owner, 2026-10-31 | Keep | No | New-message viewing, selected-group filtering/history and owner identity. Reuse NapCat/NTQQ data; MCP and coverage details need verification. Future inbox integration is later-phase work. |
 | Telegram, DingTalk, Feishu, Discord channels | G1 `plugins/*`, channel host | Exclude | No | Outside the earlier first-phase delivery scope; the broader NeuroLink positioning does not itself select these platform implementations. |
 | Channel image input/output and media handling | G1 COMPLETE CH-MEDIA | Decide | No | Old image/media plumbing does not establish voice/video support. |
 | Channel approvals, notifications and interactive cards | G1 channel/HITL notes | Decide | No | Text notifications and platform-native approval cards have different availability. |
@@ -362,7 +371,7 @@ to reading the inventory and do not silently change the agreed scope:
 
 1. NeuroLink's wire format and relationship to A2A/ACP/AG-UI; inbound/outbound
    support and which harnesses accept external work. SSH is a separate choice.
-2. Octos channel extraction/loading details and the first platform subset;
+2. Official QQ extraction/loading details and NapCat data/identity/API coverage;
    companion/embodiment implementations remain separate delivery choices.
 3. Human task approvals, status/recovery visibility, history/search and explicit
    file delivery: which behavior is needed in the first usable product.
