@@ -8,6 +8,13 @@ not list A2A and several other surfaces; this inventory corrects that omission.
 Owner decisions in the 2026-10-27 refinement supersede the earlier tentative
 dispositions; the rows below are updated, and the reference findings are in §8.
 
+Owner update, 2026-10-30: DESIGN's locked
+[PEN and NeuroLink decision](../DESIGN.md#pen-and-neurolink-decision-owner-2026-10-30)
+now governs capability packages, external conversation/event interoperability
+and Minecraft as the first game. Relevant scope rows below reflect that update;
+other target statuses remain the dated inventory, not a fresh implementation
+audit. Consult HANDOFF for subsequent workbench delivery evidence.
+
 ## How to read the matrix
 
 The **scope** column describes decisions actually made for the new Vivy:
@@ -149,8 +156,9 @@ does not establish a selected server in either Go main/stable or vivy-test.
 | MCP stdio/HTTP connection and managed lifecycle | G1 MCP backend; N5 Prime | Keep | No | Python MCP client is planned; server crash/reconnect/reload need explicit handling. |
 | MCP tool discovery, schema and invocation | G1 `mcpadapter`, MCPHost | Keep | No | Actual native tool discovery/call has not been integrated in vivy-test. |
 | MCP resources, templates, prompts, elicitation and OAuth | G1 MCP resource RPC; G5 #13 | Decide | No | Do not infer all optional MCP features from a basic tool call. |
-| Content Bundle / Toolkit containing skills, rules, masks, hooks, MCP | G1 bundles; G2 toolkits; G5 #20/#67 | Keep | No | Owner wants a small bundle feature; exact manifest, lifecycle and supported entries remain open. |
-| Bundle installation, updates, rollback, revocation and catalog UI | G1 bundles/Toolkit UI | Decide | No | Separate choices from the small content-bundle requirement. |
+| PEN external capability packages, including tools, Skills and connectors | G1 bundles; G2 toolkits; G5 #20/#67; owner, 2026-10-30 | Keep | No | Import delivers a complete capability; MCP is one possible interface. Exact manifest/runners and import behavior remain open; this does not select every legacy toolkit entry. |
+| Minecraft PEN: independent multiplayer first, client control retained | Owner, 2026-10-30 | Keep | No | Independent-player multiplayer is primary. Client operation remains a second design route; edition/version, connector and auxiliary-mod policy are undecided. |
+| PEN package updates, rollback, revocation and catalog UI | G1 bundles/Toolkit UI | Decide | No | Package import/preparation is selected; update/removal mechanisms and a hub/UI remain implementation choices. |
 | Skill discovery and project trust | G1 skillhost; N1 | Keep | Yes | Rig skills/trust are selected; no claim of every legacy marketplace feature. |
 | Skill marketplace / package download and updates | G1 marketplace RPC | Decide | No | Installing a bundle, discovering a skill and an online marketplace are distinct. |
 | Prompt templates and slash commands | N1 templates | Keep | Yes | Current coding path provides Pi-style Markdown templates. |
@@ -178,12 +186,13 @@ does not establish a selected server in either Go main/stable or vivy-test.
 | Native desktop/Wails product | G5 #31; Go feature records | Decide | No | Original product/release work is separate; no assumed reuse of its app shell. |
 | TUI interactive coding and task progress | G1 `sdk/tui`; N1 | Keep | Yes | Current compact Rig TUI exists; detailed old UI/theme/keybinding parity is partial. |
 | Print/JSON/headless modes | G1 face; N1 | Keep | Yes | Existing Rig JSON events are not full legacy wire compatibility. |
-| QQ channel as an initial external channel | G1 `plugins/qq`, channel host | Decide | No | Only first-phase candidate if channels are selected; confirm the exact QQ platform surface before implementation. |
-| Telegram, DingTalk, Feishu, Discord channels | G1 `plugins/*`, channel host | Exclude | No | Outside the proposed first-phase channel scope; no permanent ban on later selection is implied. |
+| QQ channel as an initial external channel | G1 `plugins/qq`, channel host | Decide | No | Earlier first-phase candidate; NeuroLink now has broader conversation/event scope. The exact QQ surface and delivery selection remain open. |
+| Telegram, DingTalk, Feishu, Discord channels | G1 `plugins/*`, channel host | Exclude | No | Outside the earlier first-phase delivery scope; the broader NeuroLink positioning does not itself select these platform implementations. |
 | Channel image input/output and media handling | G1 COMPLETE CH-MEDIA | Decide | No | Old image/media plumbing does not establish voice/video support. |
 | Channel approvals, notifications and interactive cards | G1 channel/HITL notes | Decide | No | Text notifications and platform-native approval cards have different availability. |
-| WeCom, Weixin, NeuroLink and public webhooks | G1 DEFER/COMPLETE; G5 #2/#13 | Decide | No | Historical proposals/deferrals, not established current product capabilities. |
-| Voice, video, embodied device and robotics integration | G1 media limits; prior owner direction | Decide | No | Python/MCP may host capabilities, but no device or live media pipeline is implemented. |
+| NeuroLink external conversation and event protocol/standard | Owner, 2026-10-30 | Keep | No | Separate from PEN capability packaging; A2A-like positioning is locked, while wire format and A2A/ACP/AG-UI interoperability remain open. Actual lifecycles belong to Vivy or the PEN module. |
+| WeCom, Weixin and public webhooks | G1 DEFER/COMPLETE; G5 #2/#13 | Decide | No | Historical proposals/deferrals, not established current product capabilities. |
+| Voice, video, embodied device and robotics integration | G1 media limits; prior owner direction | Decide | No | NeuroLink's intended range includes external embodiments; specific device and live-media implementations remain unselected. |
 | Image generation/editing | G5 #3 | Decide | No | Old owner assigned image generation to external PENS; consumption by new Vivy is not selected here. |
 
 ## 5. Model providers and runtime configuration
@@ -349,17 +358,18 @@ was implemented by this research.
 These questions are recorded for later owner choice; they are not prerequisites
 to reading the inventory and do not silently change the agreed scope:
 
-1. A2A: inbound only, outbound client too, or neither; and which harnesses may
-   accept/submit external tasks. ACP and SSH are independent choices.
-2. Daily companion entrance: local TUI, a Web/desktop surface, or the optional
-   QQ channel candidate. Voice/robotics are additional integrations.
+1. NeuroLink's wire format and relationship to A2A/ACP/AG-UI; inbound/outbound
+   support and which harnesses accept external work. SSH is a separate choice.
+2. Specific companion/channel/embodiment implementations within NeuroLink's
+   broader intended scope; its positioning does not select a platform rollout.
 3. Human task approvals, status/recovery visibility, history/search and explicit
    file delivery: which behavior is needed in the first usable product.
 4. Memory management granularity: editable Recap, long-term delete/forget and
    optional full-engine MemPalace features. The Python MemPalace + Obsidian loop
    is selected as a direction; its detailed flows and sync are not yet decided.
-5. Bundle boundary: supported content types, local versus remote sources,
-   enable/disable, update/revocation, and whether a UI is actually needed.
+5. PEN package manifest/runners, dependency composition, preparation, updates/
+   removal and optional hub/UI; complete capability packaging is already selected.
+   Minecraft still needs edition/version, connector and auxiliary-mod decisions.
 6. Web search/fetch, LSP, Python-hosted reusable workflows and masks: select
    specific user cases. Old Notebook/Reports, Skill evolution and AutoDream
    are excluded; the new evolution chain is outside Vivy.

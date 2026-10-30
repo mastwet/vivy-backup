@@ -1,5 +1,138 @@
 # Decisions and assembly direction
 
+## PEN and NeuroLink decision (owner, 2026-10-30)
+
+**Status: locked owner decision; implementation pending.** PEN and NeuroLink
+have separate responsibilities. This section supersedes earlier statements that
+PEN is undefined, that it is merely an MCP configuration bundle, or that PEN and
+NeuroLink together form an attention, persona or interaction-decision system.
+Changing these positions requires a new explicit owner decision; the open
+implementation choices below do not reopen them.
+
+### PEN: importable external capabilities
+
+The PEN system delivers external capabilities as importable packages (PEN
+packages, collectively PENs). Importing a package gives Vivy a new usable
+capability, such as playing a game, operating a computer, using a browser or
+interacting with a movie player. These examples establish the intended range;
+Minecraft is the selected first game, not evidence that the other capabilities
+are already selected for delivery or implemented.
+
+A package may combine callable tools, Skills/instructions, connector programs,
+scripts or libraries, resources, dependency declarations and connection/runtime
+configuration. Its contents serve one capability and need not include every
+kind of entry. Tools provide operations; Skills explain how to use them; the
+connector and supporting resources make the integration work. A package can
+reuse capabilities already available in the host rather than duplicate them.
+
+MCP is one possible interface inside a PEN package. PEN's broader scope is the
+delivery and composition of a complete capability; it does not require replacing
+MCP's wire protocol or wrapping every library and program as an MCP server. A
+package may also supply a NeuroLink connector for messages and events.
+
+The intended import experience is that the host can determine what a package
+adds, prepare its declared requirements and report whether the capability is
+usable, with useful causes when preparation or connection fails. A consistent
+package contract should reduce dependency, path and configuration failures; it
+does not guarantee that arbitrary third-party implementations are bug-free.
+Local package import is part of this direction. A downloadable catalog/hub is
+a possible distribution mechanism, not a mandatory first-delivery service.
+
+PEN support remains a compiled, recipe-selected host capability. Packages use
+the support present in that host; adding a native Rust component still requires
+a recipe change and rebuild. Runtime package import does not become native Rust
+plugin hot-loading or bypass existing setup/trust rules. Reuse the existing
+workbench, MCP and Skill mechanisms where suitable; this decision does not
+select another agent runtime, script engine or public plugin SDK.
+
+### NeuroLink: external conversation and event interoperability
+
+NeuroLink is a separate connection protocol/standard for external participants,
+conversations and events. Its intended range includes chat channels, external
+agents, user-facing applications, Live2D/3D digital characters, VRChat and
+embodied devices. Channels are one example of external interaction, not the
+definition of the whole protocol. Specific platform implementations remain
+separate delivery choices.
+
+The owner describes this as A2A-like, potentially a "super A2A" for broader
+external chat and event interoperability. That selects the purpose, not a claim
+of A2A compatibility or a finalized wire format. Using A2A profiles/extensions,
+an independent protocol with an A2A adapter, and exact ACP/AG-UI interoperability
+remain implementation choices. In this project's existing discussion, ACP means
+Agent Client Protocol. Inbound/server and outbound/client support are separate
+choices; neither follows automatically from naming a protocol.
+
+The protocol expresses exchanges and necessary externally visible state.
+Actual execution, task/session/resource lifecycles and cleanup belong to Vivy
+or the responsible PEN module implementation. NeuroLink does not decide whom
+Vivy attends to, whether to respond, personality or task scheduling. Supporting
+a protocol's state/cancellation contract does not transfer lifecycle ownership
+to a new protocol-level supervisor.
+
+PEN and NeuroLink can serve the same integration without becoming the same
+thing: a game PEN can deliver observation/action tools and game Skills, while
+its connector exchanges chat and game events through NeuroLink. Prefer existing
+channel adapters over developing platform integrations from scratch. ZeroClaw
+is a reuse candidate, not a selected runtime or verified dependency.
+
+### First game: Minecraft, independent multiplayer first
+
+Minecraft is selected as the first PEN game integration. The owner prioritizes
+Vivy joining multiplayer as an independent player. Controlling a Minecraft
+client on the computer must also be considered in the capability design; it is
+a retained second route, not an additional first-delivery implementation gate.
+
+| Route | Observation and action model | Decision |
+| --- | --- | --- |
+| Independent multiplayer player | A game connector exposes available structured observations and game operations. | Primary initial route. |
+| Computer-controlled game client | Screen observation and input control, with possible auxiliary interfaces. | Retain in the design; exact implementation is open. |
+
+Keep the Minecraft capability distinct from either connector implementation.
+Shared game knowledge and Skills may be reused, while tool instructions and
+execution code can differ. Each implementation must describe its actual
+observations, operations and prerequisites; identical tool signatures or equal
+capability coverage are not assumed. The client route may reuse computer-control
+capabilities instead of introducing a Minecraft-specific desktop-control stack.
+
+Minecraft edition/version, server setup, authentication, connector dependencies,
+package layout and the exact first gameplay acceptance task remain open.
+Mineflayer and its pathfinder plugin are candidates supporting the recommended
+Java Edition route; Java Edition and Mineflayer themselves are not locked
+implementation selections. Whether client control uses only the screen, keyboard
+and mouse or may use an auxiliary mod is unanswered. Do not silently choose that
+boundary while implementing the initial multiplayer route.
+
+### Remaining engineering choices and evidence
+
+Detailed design still needs the smallest package manifest, supported entry
+types/runners, preparation and capability-discovery behavior, package dependency
+composition, configuration/credential references, import/update/removal behavior,
+and NeuroLink's exchange/event schemas and transport. A hub, a general package
+manager and a universal capability catalog are not prerequisites. These details
+must preserve the locked positioning and existing recipe/lifecycle ownership.
+
+Supporting references inspected during this discussion:
+
+- [MCPB](https://github.com/modelcontextprotocol/mcpb) and the
+  [Agent Skills specification](https://agentskills.io/specification) are
+  existing packaging/content conventions to evaluate for reuse, not selected
+  PEN formats.
+- [A2A extensions](https://a2a-protocol.org/latest/topics/extensions/) are one
+  possible foundation for NeuroLink interoperability, not proof of a selected
+  or compatible NeuroLink implementation.
+- [Mineflayer](https://github.com/PrismarineJS/mineflayer) and
+  [mineflayer-pathfinder](https://github.com/PrismarineJS/mineflayer-pathfinder)
+  provide candidate game interfaces and navigation; their availability does not
+  establish Vivy integration, edition/version compatibility or Windows acceptance.
+- [ZeroClaw's channel crate](https://github.com/zeroclaw-labs/zeroclaw/tree/1c1cd118ac536a1dd1bc79b9cce69cbdc04e4f29/crates/zeroclaw-channels)
+  is a channel-adapter reuse candidate; its dependency/lifecycle fit still needs
+  verification.
+
+This delivery records decisions only. No PEN loader/package, NeuroLink protocol
+implementation or Minecraft integration is delivered or run. It does not start
+durable work, alter the owner-deferred real-provider acceptance gate, or authorize
+access to the original Vivy checkout/data.
+
 ## AutoDream evolution decision (owner, 2026-10-29)
 
 The new Vivy's evolution capability is named **AutoDream**. The owner selects
@@ -322,6 +455,7 @@ addition and its verification. This does not expand the parked Goal/evolution wo
 | Run first; keep mechanisms inexpensive | The first end-to-end coding task precedes a generalized plugin platform. |
 | Skip species hashes and a standalone SDK | No content-addressed species identity, sealed manifests, attestation, or public SDK release work. |
 | Hybrid direct tools and Python workbench | Frequent coding tools remain direct; MCP and programmable composition live in Python. |
+| PEN capability packages and separate NeuroLink protocol | Importable packages deliver external capabilities; NeuroLink handles external conversations/events. Minecraft starts with independent multiplayer; client control remains a second design route. See the locked 2026-10-30 decision above. |
 | Native delegation; optional Python orchestration later | Recipe-selected Rig wrapper provides single tasks, bounded parallel batches and chains. Python/apixis remains a later composition direction. See the dated subagent delivery record. |
 | Validate the Python workbench before starting durable | Coding has passed real-task acceptance. Close the new workbench's design and system validation first; then establish durable and verify its workbench integration. |
 
@@ -544,11 +678,12 @@ memory or session responsibilities. The ingestion triggers, source identity,
 domain partition selection, deduplication, failure handling and Obsidian
 integration need separate design. No automatic ingestion is implied.
 
-Retain small content bundles and hooks as intended capabilities. Bundle format
-and exact import/enable behavior remain to be selected; a minimal content bundle
-need not reproduce the old toolkit publication/rollback platform. Compiled Rust
-component selection still belongs to the YAML recipe and rebuild. Existing
-PlanPlugin is delivered. Rig's `corpus/base/src/session_goal.rs` supplies a saved
+Retain small content bundles and hooks as intended capabilities. The 2026-10-30
+PEN decision above now selects complete external capability packages; exact
+manifest and import/enable behavior remain to be designed without reproducing
+the old toolkit publication/rollback platform. Compiled Rust component selection
+still belongs to the YAML recipe and rebuild. Existing PlanPlugin is delivered.
+Rig's `corpus/base/src/session_goal.rs` supplies a saved
 session-goal example and `corpus/sn/src/hook_scripts.rs` supplies an external-hook
 example; neither is selected in the current recipe. These are reusable source
 patterns, not evidence of delivered Vivy Goal or external hooks. Autonomous Goal
@@ -684,7 +819,7 @@ Rig host: gateway/model calls, context assembly, TUI/CLI, sessions, cancellation
 | Agent delegation requested from Python | A small bridge to Rig's existing subagent lifecycle; host-owned model/gateway access, usage, limits and cancellation. No Python-owned agent loop or separate provider path. |
 | Model calls requested from Python | A bounded request through the host's gateway, usage and cancellation path for a concrete task, without a second provider stack. |
 | Evolution scheduling, validation, state/history commits | One host owner, using the normal model-call path. Python may prepare evidence or execute checks; it does not own another refinement scheduler/store. |
-| Memory backends | MemPalace or memU, imported directly in the worker (delivery step 4), with one memory owner across forks. PEN is deferred. |
+| Memory backends | MemPalace or memU, imported directly in the worker (delivery step 4), with one memory owner across forks. PEN is a separate capability-package concern; see the 2026-10-30 decision. |
 
 Reuse a plugin directly unless Vivy adds actual selection behavior or a required
 product difference. A concept in this table does not require a separate crate,
@@ -971,9 +1106,10 @@ is the stop condition: unrequested infrastructure is not extra progress.
 
 The exact Rig persistence hook, smallest framed bridge messages and state/history
 commit procedure remain bounded implementation choices to verify against actual
-APIs. PEN and an external memory provider remain unspecified and excluded. This
-review cannot prove the absence of all architecture defects without implementation
-and real-path tests.
+APIs. PEN and an external memory provider were unspecified and excluded from
+this dated review; later dated decisions govern their current scope. This review
+cannot prove the absence of all architecture defects without implementation and
+real-path tests.
 
 ## What Vivy's assembly idea contributes
 

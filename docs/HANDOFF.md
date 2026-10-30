@@ -1,5 +1,28 @@
 # Handoff: continue the independent assembly experiment
 
+## PEN, NeuroLink and Minecraft decision checkpoint (2026-10-30)
+
+The owner locks the positioning in DESIGN's
+[PEN and NeuroLink decision](DESIGN.md#pen-and-neurolink-decision-owner-2026-10-30).
+PEN packages deliver complete external capabilities on import and may combine
+tools, MCP connections, Skills, connector code, resources and configuration.
+PEN is broader than an MCP configuration bundle. NeuroLink is a separate
+A2A-like protocol/standard for external conversations and events; channels are
+one integration class. Execution and actual lifecycles remain in Vivy or the
+responsible PEN module, not in a protocol-level attention/scheduling system.
+
+Minecraft is the first selected game. Independent-player multiplayer is the
+primary route; computer-controlled client play must remain possible in the
+design but is not a second first-delivery gate. Edition/version, Mineflayer or
+another connector, auxiliary-mod policy, manifest/runners, hub distribution and
+the exact A2A/ACP/AG-UI relationship are not finalized. Prefer existing adapters;
+ZeroClaw and Mineflayer are candidates, not verified Vivy integrations.
+
+This is a documentation-only decision checkpoint: no PEN/NeuroLink/Minecraft
+runtime is delivered. Recipe-selected compilation, existing setup/trust rules,
+durable sequencing and the deferred workbench provider gate are unchanged. Read
+the locked decision before using older PEN-undefined or channel-only scope notes.
+
 ## AutoDream decision checkpoint (2026-10-29)
 
 The owner selects AutoDream for the new Vivy's evolution chain: a collection
@@ -394,8 +417,9 @@ The older coding-only delivery sequence and its verification gaps remain in
 DESIGN and PI-BASELINE. Preserve the Windows launcher and Rig harness/TUI while
 checking that path; keep actual gateway evidence distinct from mock checks.
 Those coding records do not establish or select the durable implementation.
-The validated Python workbench now precedes the durable implementation;
-automatic evolution, persona growth and PEN remain separate future scope.
+The validated Python workbench now precedes the durable implementation.
+Automatic evolution and PEN/NeuroLink have later dated decisions above;
+their implementation and persona growth are not delivered by this checkpoint.
 
 Use existing authorized gateway configuration without printing credentials. If
 essential configuration is unavailable, request only that missing information.
