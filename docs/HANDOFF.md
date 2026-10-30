@@ -1,5 +1,34 @@
 # Handoff: continue the independent assembly experiment
 
+## Durable design preparation and Pi refresh (2026-10-31)
+
+The owner now explicitly starts persistent-assistant design preparation, with
+pi-durable as the anchor and the mysoul basic loop, Laputa governance and
+AutoDream decisions as inputs. The owner confirmed that "myllm" in the request
+means mysoul. This supersedes the older instruction to defer durable research;
+the current request is inspection followed by discussion, not implementation
+approval or a new real-provider acceptance result.
+
+The clean `.workspace/pi` reference was fetched and moved in detached HEAD from
+`f321e5bdd26b3624bfb2ab182a334d0a5edb698a` to upstream `main` at
+`a14cdf90f0a76532f3e20bc3c01872837cef24ba` (commit date 2026-10-30).
+No dependencies were installed and no Pi code was modified. Earlier coding
+comparisons remain evidence for their original revision. Read the refresh in
+[session storage research](research/2026-10-27-session-storage.md#durable-reference-refresh-2026-10-31)
+before relying on the old durable storage or notification descriptions.
+
+Key differences for discussion: Pi steering follows a whole tool round, whereas
+the owner selected a single-tool handoff boundary; Pi's new `afterRun` work keeps
+the conversation busy and cannot be assumed to be the AutoDream scheduling
+policy; streamed progress can now be visible before persistence, unlike task
+admission and tool intent. The official inbox remains deferred. Rust lifecycle,
+storage, context refresh and recovery details still need a bounded design.
+
+Source and existing verification records were inspected in mysoul's current
+Desktop checkout (`3a7cbde7`), including Recap-only context, explicit recall and
+autonomous wake scheduling. No application was run or live data accessed. The
+previous Vivy workbench provider gate is not retrospectively marked passed.
+
 ## Laputa protocol and native governance checkpoint (2026-10-31)
 
 Read DESIGN's
@@ -354,8 +383,8 @@ changes; do not overwrite somebody's work.
 
 ```sh
 git clone --depth 1 https://github.com/earendil-works/pi.git .workspace/pi
-git -C .workspace/pi fetch --depth 1 origin f321e5bdd26b3624bfb2ab182a334d0a5edb698a
-git -C .workspace/pi checkout --detach f321e5bdd26b3624bfb2ab182a334d0a5edb698a
+git -C .workspace/pi fetch --depth 1 origin a14cdf90f0a76532f3e20bc3c01872837cef24ba
+git -C .workspace/pi checkout --detach a14cdf90f0a76532f3e20bc3c01872837cef24ba
 
 git clone --depth 1 https://github.com/0xPlaygrounds/rig.git .workspace/rig
 git -C .workspace/rig fetch --depth 1 origin e1cd47d57f0bccb50ddffd6f45de2ac3365b271c

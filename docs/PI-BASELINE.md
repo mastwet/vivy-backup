@@ -5,6 +5,11 @@ Source baseline: [earendil-works/pi][pi], revision
 2026-10-24. Rig comparison revision:
 `e1cd47d57f0bccb50ddffd6f45de2ac3365b271c` (`0.46.0-rc.1`).
 
+On 2026-10-31 the local Pi reference was refreshed to
+`a14cdf90f0a76532f3e20bc3c01872837cef24ba` for durable design preparation.
+The coding comparison results below retain their original pins; they were not
+rerun against that refresh. See [the handoff](HANDOFF.md#durable-design-preparation-and-pi-refresh-2026-10-31).
+
 The user requested the complete coding-agent capability range, then prioritized
 a minimal working experiment with gateway access and no standalone SDK or species
 hash system. Keep the wider range visible without making it a first-run gate.

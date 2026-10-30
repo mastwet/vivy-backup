@@ -8,7 +8,8 @@ shared memory integration are not yet implemented.
 
 ## Reference scope
 
-Source checkouts inspected read-only:
+Historical comparison below: source checkouts inspected read-only. The
+2026-10-31 refresh follows this list; it does not redate earlier test evidence.
 
 - Prime `c4c238ca025e382d96fb5f37e6328ca77fb82ef3`:
   `crates/pa-core/src/session/{manager,window.rs,window_cache.rs}` and
@@ -23,6 +24,68 @@ Source checkouts inspected read-only:
 
 These are pinned local source findings, not new runtime tests. No user sessions,
 databases, credentials, or production data were inspected.
+
+## Durable reference refresh (2026-10-31)
+
+The owner starts persistent-assistant design preparation and reaffirms pi-durable
+as its anchor. The local Pi reference now matches upstream `main` at
+`a14cdf90f0a76532f3e20bc3c01872837cef24ba` (2026-10-30). Its durable package still
+declares itself experimental. Reviewed material includes its
+[README](https://github.com/earendil-works/pi/blob/a14cdf90f0a76532f3e20bc3c01872837cef24ba/packages/durable/README.md),
+changelog and the relevant tool, generation, live-progress and submission code.
+This is a reference refresh, not a TypeScript runtime dependency or a completed
+Rust implementation. No upstream or Vivy runtime tests were run for this review.
+
+- **Keep the lifecycle anchor.** Admission deduplication, committed phases and
+  sleep deadlines, explicit abort and recovery remain relevant. Cancelling a
+  wait does not abort work. A sleeping task still needs a running host or a host
+  alarm to resume; a stored deadline cannot start a stopped desktop process.
+- **Recovery is conditional.** The tool implementation commits intent before
+  execution, defaults to unsafe replay, and reruns an interrupted tool only when
+  both its saved and current replay policies are safe. Otherwise it reports
+  interruption and possible partial execution. Arbitrary Python cells, MCP
+  actions and remote messages need effect-specific treatment.
+- **Separate progress from durable decisions.** Streamed partials/output now use
+  deferred document commits: views update immediately, while persistence occurs
+  with dependent work or after the default approximately 1,000 ms deadline.
+  Task states, entries and tool intent still force persistence. The old blanket
+  description that nothing is shown before storage must not be applied to live
+  progress at this revision. Adopting this optimization in Vivy is undecided.
+- **Do not copy the steering boundary.** Pi places steering after the current
+  tool round; follow-ups wait for an answer. Vivy's accepted ordinary handoff is
+  after a single tool finishes, with the agent deciding what comes next and the
+  human retaining immediate interruption. Multiple calls in one model response
+  therefore need explicit scheduling and result handling in the later design.
+- **Keep evolution scheduling explicit.** New `afterRun` hooks create durable
+  child tasks after an answer; the answer settles first, but the conversation
+  stays busy until those tasks finish and new input waits. This is useful
+  lifecycle evidence, not a selected AutoDream trigger or a reason to block
+  conversation on evolution. The separately deferred official inbox is also
+  distinct from Pi's internal submission queue.
+- **Keep the storage decision bounded.** Storage now accepts grouped atomic
+  commits with per-commit receipts; conversation views use bounded transcript
+  windows. JSONL still keeps full history in memory, and storage still needs a
+  single process owner. A bounded UI view does not fix backend history growth.
+  The owner's JSON-file preference stands; format, sync, locking and recovery
+  remain open. No grouping or cache machinery is required without a measured
+  need in the selected Rust implementation.
+
+The owner confirmed "myllm" means mysoul. The Desktop mysoul checkout is now at
+`3a7cbde7`, newer than the previously referenced worktree. Its
+`src/mysoul/service.py`, `laputa.py`, integration tests, runbook and validation
+records support persona plus committed Recap, current input/activity state,
+explicit bounded recall, and subject-scheduled wakeups as design inputs. This
+inspection did not rerun those integrations. Existing real-provider wake-tool
+validation records include gateway failures; the owner's basic-loop evidence
+does not establish every integration or the new Rust recovery contract.
+
+Laputa's new persona authority and AutoDream's automatic adoption remain the
+accepted direction. Exact durable context policy, task orchestration and the
+first acceptance scenario are still for discussion. Entering design preparation
+does not mark the deferred Vivy workbench provider gate passed or advance the
+official inbox implementation schedule.
+
+## Historical implementation comparison (2026-10-27)
 
 The owner's follow-up correctly notes that **Go Vivy uses SQLite**. The Rig
 file-store row below describes the current **vivy-test experiment**, not the
