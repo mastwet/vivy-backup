@@ -92,6 +92,20 @@ owner rulings or implemented guarantees. The goal is one recoverable execution
 chain through the current coding face, followed by context/memory, wake and
 evolution integration. Product navigation remains outside this design.
 
+**Upstream adoption amendment (2026-10-31).** The owner emphasizes direct Rig
+reuse and contributing generic fixes to avoid downstream divergence. The
+[current upstream assessment](research/2026-10-27-session-storage.md#current-upstream-adoption-assessment-2026-10-31)
+finds a new public `CarryOn` continuation policy and existing saved-state,
+recovery, timer and corpus examples. Prefer these public primitives and bounded
+upstream improvements before implementing Vivy-owned equivalents. This refines
+Plan B's implementation ownership, not its required guarantees. The custom
+framed `DurableStore` described below is now a conditional fallback, not the
+default first build task. D0 first verifies reuse and concrete missing guarantees
+on a deliberately selected Rig revision. Latest upstream is not yet our tested
+dependency: its default is to stop restored turns unless a plugin opts in;
+Vivy must restore its continuation policy explicitly. No pin upgrade or upstream
+contribution is delivered by this amendment.
+
 #### 1. Composition and ownership
 
 Keep Rig's existing agent loop, model adapters, tool registry, conversation
@@ -188,8 +202,10 @@ reason. Existing non-durable recipe behavior is preserved.
 
 #### 3. Storage and the actual commit unit
 
-Reuse Rig's logical logs and saved components. Implement a `DurableStore`
-behind `StoreOpener`, without a parallel task database. Each task checkpoint and
+Reuse Rig's logical logs and saved components. First evaluate Rig's store and
+small upstream extensions against the required commit contract. If a separate
+`DurableStore` is still justified, the fallback design below places it behind
+`StoreOpener`, without a parallel task database. Each task checkpoint and
 the exact data needed to resume it must reside in the same **agent-log append**.
 Session listing metadata is derived. No invariant in the first slice requires
 an atomic write across an agent log, another agent log and the session log.

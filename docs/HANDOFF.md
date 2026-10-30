@@ -1,5 +1,26 @@
 # Handoff: continue the independent assembly experiment
 
+## Rig reuse and upstream contribution assessment (2026-10-31)
+
+The owner emphasizes direct Rig reuse and upstream contributions to reduce
+downstream divergence. Read the
+[current upstream assessment](research/2026-10-27-session-storage.md#current-upstream-adoption-assessment-2026-10-31)
+and DESIGN's amendment before implementing the detailed proposal below. Keep
+Plan B, but prefer existing Rig primitives and small upstream improvements;
+the proposed private framed `DurableStore` is a fallback, not the first task.
+
+Latest inspected main is `fc556f982d501eea9d7167398a19386e4884e776`, 12 commits
+ahead of our unchanged `e1cd47d57` recipe pin. PR #2943 changes default recovery:
+exit/restart stops unfinished turns, while public `CarryOn` explicitly enables
+plugin-owned continuation. Saved state, `Interrupted`, holds and `WakeAt` plus
+upstream corpus examples are reuse candidates. Ordinary log append still lacks
+disk sync; a continuation marker alone does not satisfy the complete contract.
+The latest stable release is v0.45.0, older than our current pin. A candidate
+upgrade needs recovery, cancellation and TUI/plugin compatibility verification.
+No dependency/reference-checkout update, issue/PR submission or runtime test is
+delivered by this source audit. The preceding architecture's acceptance goals
+and deferred real-provider gate remain unchanged.
+
 ## Detailed Plan B architecture proposed (2026-10-31)
 
 The owner requested detailed architecture after selecting Plan B. Read the

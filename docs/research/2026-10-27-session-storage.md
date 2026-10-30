@@ -21,6 +21,73 @@ Rig logs. The proposed commit/recovery contract and its unproven integration
 seams take precedence over provisional implementation suggestions below; this
 research does not constitute runtime validation or approval of those details.
 
+## Current upstream adoption assessment (2026-10-31)
+
+The owner asks whether using Rig directly and contributing generic fixes can
+avoid a long-lived downstream fork. This assessment recommends that approach
+within Plan B. It is source/API research, not an upgraded dependency or a
+successful integration test.
+
+GitHub's default branch resolves to
+`fc556f982d501eea9d7167398a19386e4884e776` (2026-10-30 UTC); the
+[comparison with our recipe pin](https://github.com/0xPlaygrounds/rig/compare/e1cd47d57f0bccb50ddffd6f45de2ac3365b271c...fc556f982d501eea9d7167398a19386e4884e776)
+reports 12 commits ahead, none behind. The latest published release is
+[v0.45.0](https://github.com/0xPlaygrounds/rig/releases/tag/v0.45.0), published
+2026-10-19. Our current 2026-10-27 pin is already later than that release;
+upgrading to a tested Git revision and switching to the latest release are not
+the same operation. Neither the recipe pin nor the reference checkout changed
+during this assessment.
+
+| Upstream evidence | Meaning for Vivy |
+| --- | --- |
+| [Discussion #1924](https://github.com/0xPlaygrounds/rig/discussions/1924), [issue #2244](https://github.com/0xPlaygrounds/rig/issues/2244), [PR #2762](https://github.com/0xPlaygrounds/rig/pull/2762) | Serializable `AgentRun` and resume through the shared runner have an established upstream history. These are the classic `rig-agent` path; our harness uses `rig-ecs`, so these APIs are not a drop-in replacement for the current loop. |
+| [PR #2514](https://github.com/0xPlaygrounds/rig/pull/2514), followed by [#2761](https://github.com/0xPlaygrounds/rig/pull/2761) and [#2771](https://github.com/0xPlaygrounds/rig/pull/2771) | The old ECS tool-turn checkpoint API was followed by deletion of that ECS and a new implementation. The old `ToolTurnCommit` / `RigSet::Checkpoint` names are absent from our pin; do not design against their historical announcement. |
+| [PR #2943](https://github.com/0xPlaygrounds/rig/pull/2943), merged 2026-10-29 | Latest harness defaults stop unfinished work after exit/restart. A plugin explicitly opts a turn into continuation with public `CarryOn`, re-armed from its saved policy on restoration. This supersedes the old default automatic-continuation behavior described in #2841/#2844. |
+| [Latest restore source](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/crates/rig-ecs/src/restore.rs) and [plugin guide](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/crates/rig-harness/PLUGINS.md) | `CarryOn`, `Restored`, `Interrupted`, saved reflected components, holds and `WakeAt` are existing building blocks. `CarryOn` is not itself saved and is consumed during restoration; the host must reconstruct its policy. |
+| [crash_resume](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/corpus/sn/src/crash_resume.rs), [task_queue](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/corpus/sn/src/task_queue.rs), [batch_provider](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/corpus/fh/src/batch_provider.rs) | Upstream examples demonstrate recovery choices, a saved queue and a saved external batch wait re-armed after restart. They are corpus examples, not a separately released persistent-assistant package. The queue marks interrupted tasks for retry; it does not establish exact phase recovery. |
+| [PR #2890](https://github.com/0xPlaygrounds/rig/pull/2890), merged 2026-10-23 | SQLite/Postgres session backends exist as `AsyncStore`. The PR explicitly leaves the synchronous harness `Store` unchanged, so replacing the current harness storage with these is not a configuration-only switch. |
+
+The durability gaps recorded in
+[PR #2844](https://github.com/0xPlaygrounds/rig/pull/2844) are not all solved by
+the newer continuation interface. At the inspected latest revision,
+[`stage.rs`](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/crates/rig-ecs/src/stage.rs)
+still describes its pre-effect log write as not disk-synced, and
+[`DirStore::append_log`](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/crates/rig-memory/src/dir.rs)
+uses `write_all` without syncing. `replace_log` does use a synced replacement;
+do not describe the whole store as having no sync anywhere. The writer still
+appends logs separately; no atomic parent-report/request-clear operation was
+established by this inspection. `SessionLog::flush` remains crate-private.
+
+PR #2943 also lists unresolved cases for a carried turn whose tool is active at
+quit, and for a carried child whose parent stopped. These are promising bounded
+reproduction/contribution targets, not proof that arbitrary continuation is safe.
+Public searches for open PRs containing `durable`, `checkpoint` or `fsync` found
+no dedicated pending completion of the deferred stronger-durability work. This
+is a bounded search, not a claim about private plans or an upstream delivery date.
+
+Recommended integration order:
+
+1. Audit D0 against a deliberately selected current Rig revision, including the
+   new stop/`CarryOn` contract and relevant TUI/plugin migration. Reuse Rig's
+   saved state, recovery markers, queue/timer mechanisms and logical storage.
+2. Implement only Vivy policy locally: which tasks survive, when to hand off,
+   deadlines/budgets, context/persona, memory and evolution. Keep the existing
+   YAML compile-time assembly and coding face.
+3. Reproduce missing generic guarantees in upstream-sized tests. Prefer fixes
+   or small opt-in APIs in Rig for commit/sync acknowledgement, continuation
+   correctness and parent/child result consistency. Do not change interactive
+   coding's default stop behavior merely to support Vivy's unattended policy.
+4. Keep a private Store/runtime replacement conditional on a demonstrated gap
+   and the upstream design response. A temporary patch needs a bounded scope
+   and removal target; an unmerged upstream contribution is not a guarantee of
+   future acceptance. Pin upgrades and run downstream acceptance even after
+   a fix lands, since public APIs and default semantics are still changing.
+
+This tightens the earlier design's implementation ownership: a Vivy-owned framed
+`DurableStore` is a fallback proposal, not the first implementation task. The
+accepted recovery guarantees remain; direct upstream reuse does not waive them.
+No issue/PR was posted and no runtime verification was performed in this audit.
+
 ## Reference scope
 
 Historical comparison below: source checkouts inspected read-only. The
