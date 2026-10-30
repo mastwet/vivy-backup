@@ -1,5 +1,73 @@
 # Decisions and assembly direction
 
+## Laputa protocol and Garden governance decision (owner, 2026-10-31)
+
+**Status: accepted architecture direction; implementation pending.** Apply
+More, Fast, Good, Frugal by reusing the host's persona, working context and memory
+facilities. Laputa becomes a specification/protocol for persona and memory
+governance with small host-specific implementations. An independent Laputa
+library, Garden server or complete memory runtime is not a universal prerequisite.
+This supersedes older assumptions that Laputa must own ACTMEM, that persona must
+be stored in Prime harness entries, or that Vivy must consume Garden through the
+old Go MemoryPort/REST design.
+
+### Ownership in the new Vivy
+
+| Concern | Selected responsibility |
+| --- | --- |
+| Persona | The Vivy-side Laputa implementation manages one authoritative persona source, exposes controlled read/update operations, and supplies the persona layer of model context. |
+| Persona injection | Persona is the root persona block in the application's top-level prompt composition. The actual host assembles the request; storing data or editing a file alone does not prove the model received it. Exact fields, format, size and refresh boundary remain open. |
+| Short-term Recap / ACTMEM | The agent/harness owns its working-context engine, persistence and compaction. Laputa describes the ownership/integration boundary; it does not introduce a second Recap engine or require Garden's ACTMEM file. Coding and durable retain their separate context policies. |
+| Long-term memory | The current implementation remains the full Python-native MemPalace integration. The architecture should permit a later replacement backend, such as Mem0, without moving persona or task-state authority into that backend. No replacement adapter or data migration is selected now. |
+| Evolution | Vivy's AutoDream closes its own collection-to-adoption workflow. Reusable Garden workflows may serve other hosts; running Garden is not a prerequisite for Vivy evolution. |
+
+A small Rust implementation is the preferred Vivy integration direction for
+persona reads, updates and prompt composition. The protocol does not prescribe
+Rust for other hosts, and the exact Rust crate/API is not selected. Dedicated
+workflows such as AutoDream retain their persona-free Dream prompt. Persona data
+changes are runtime data updates; selecting new compiled components still follows
+the YAML recipe and rebuild. Do not inject MemPalace L0 as another identity source.
+MemPalace's partition vocabulary remains useful within that backend, not a
+mandatory schema for all future memory engines.
+
+Backend interchangeability is an architectural boundary, not a claim of equal
+features or automatic data portability. Select the smallest interface needed by
+real consumers and report unsupported operations honestly. Keep canonical memory
+writes and engine-specific storage inside the selected backend. A working
+workspace can hold source materials and evolution artifacts without becoming a
+second authoritative copy of all long-term memory.
+
+### Garden as a reusable governance workflow
+
+Garden remains useful as an optional workflow/management application for agents
+without Vivy's integration, with Hermes and OpenClaw as owner-named examples.
+Adapt to each host's existing persona files, memory facilities and native
+evolution path. Update the host's existing authoritative files or supported write
+API rather than maintaining parallel Laputa persona files. File names, native
+reload behavior and available evolution hooks require adapter-specific inspection;
+this decision does not certify those integrations.
+
+The required closed loop is: collect corpus/evidence in an explicit workspace;
+invoke a selected agent to produce updates; apply them through the owning host's
+write policy; verify which changes became effective; retain outcomes usable by a
+later run. Candidate generation alone is not completion. Vivy's existing
+AutoDream decision retains automatic adoption without routine human approval of
+each candidate. Other hosts keep their own update and approval policies; the
+protocol does not impose one universal Persona review workflow.
+
+Do not add a competing scheduler or evolution writer when the host already owns
+one. The workflow can reuse or coordinate that native path. A unified Web console
+and future Garden management of Vivy's internal Laputa are possible extensions
+for later discussion, not selected remote-management transports or current gates.
+Exact protocol messages, persona representation, update/conflict/history rules,
+backend interfaces and workflow packaging remain detailed design work.
+
+The same owner direction is recorded in the local Garden/Laputa project's
+`docs/architecture/0016-laputa-protocol-and-native-agent-governance.md`.
+No original Vivy checkout/data is needed. This is a documentation-only checkpoint;
+it does not deliver Laputa/Garden adapters, change the deferred workbench provider
+gate, start durable, or advance the later inbox schedule.
+
 ## Inbox and event handoff decision (owner, 2026-10-31)
 
 **Schedule: later phase, outside the immediate implementation stage.** Retain
@@ -647,9 +715,10 @@ L3 as semantic search. `MemoryStack.wake_up()` renders L0 and L1 together;
 ordinary MCP search/get do not require that wrapper. Layer numbers are not
 palace/wing/room/drawer depths, task checkpoints or ACTMEM versions.
 
-Laputa remains the persona/context authority. Do not inject MemPalace L0 identity
-or maintain a second persona file. Compose admitted memory results with Laputa's
-selected identity and the path's own working context. MemPalace L1 is not a
+Under the 2026-10-31 Laputa protocol decision, the host's Laputa implementation
+maintains one persona source and supplies its persona context. Do not inject
+MemPalace L0 identity or maintain a second persona file. Compose admitted memory
+results with that persona and the path's own working context. MemPalace L1 is not a
 replacement for authoritative current task state; adopting its rendering would
 need a concrete benefit beyond the planned ACTMEM/Recap projection. The choice
 of scoped MCP or Python calls does not require modifying the upstream engine.
@@ -760,10 +829,11 @@ Owner refinement after the Go migration assessment: retire BML and use the full
 upstream MemPalace engine through Python; an upstream memory-engine extraction
 or slim fork is no longer the intended starting point. A small Vivy-facing API
 can still bound outputs and select partitions without removing engine features.
-The earlier Laputa persona authority remains: MemPalace L0 is not injected.
-Laputa itself will be rewritten; preserving its responsibility does not mean
-importing its existing Go implementation. ACTMEM/Recap remains working state,
-separate from MemPalace's long-term storage/retrieval responsibility.
+The earlier persona boundary remains: MemPalace L0 is not injected. The
+2026-10-31 Laputa decision now selects a specification/protocol and a small native
+Vivy persona implementation, rather than importing the existing Go runtime.
+ACTMEM/Recap belongs to the agent/harness, separately from both persona and
+MemPalace's long-term storage/retrieval responsibility.
 
 The owner's subsequent storage direction is to avoid an additional Vivy-owned
 SQLite database: use JSON-based files for the Vivy session/task persistence
@@ -976,9 +1046,12 @@ permission or TypeScript extension compatibility.
   Supplemental execution records reference those identities instead of copying
   a second transcript. The concrete append hook is selected against the pinned
   Rig implementation before event code is added.
-- Prime-shaped harness state owns learned prompt notes, memories, skill references
-  and the persona extension. Use its `local`/`global` scope vocabulary; the host
-  selects the owning session/profile directory, never model-supplied identity.
+- Prime-shaped artifacts may represent learned prompt notes and skill references.
+  Under the 2026-10-31 decision, persona stays in the host's authoritative persona
+  source, accessed through its Laputa implementation; do not copy it into another
+  authoritative harness entry. Use Prime's `local`/`global` scope vocabulary where
+  applicable; the host selects the owning session/profile directory, never
+  model-supplied identity.
   The first implementation has one operator profile, not multi-tenancy. Here
   `local` means session/branch working state; `global` means that operator's
   cross-session learned state, not a tenant or project registry.
@@ -986,7 +1059,9 @@ permission or TypeScript extension compatibility.
   not a new ACTMEM database/file or a second editable task board. Conversation
   compaction summarizes history; it does not independently own current task state.
 - Explicit owner-authored persona/mission constraints have one selected source;
-  evolving observations live in the harness. They cannot override fixed inputs.
+  evolving persona observations update that source through the host's write policy.
+  They cannot override fixed inputs. Other reusable learned artifacts retain their
+  own selected owner.
 - Markdown skill bodies retain their existing file owner. Harness skill entries
   reference those files or executable Python artifacts; do not copy a second
   authoritative skill body into a new registry. Validate references at use time.
@@ -1053,6 +1128,12 @@ explicitly. Redact credentials in the collection path, including error payloads.
 Do not retain unlimited streams or claim complete replay of unrecorded external state.
 
 ### Prime anchor and persona growth
+
+Scope update, 2026-10-31: the Laputa protocol decision above takes precedence
+for persona ownership and storage. Prime-shaped evolution artifacts do not
+require moving native persona files into a second harness authority. The older
+representation defaults below are research guidance only where compatible with
+that decision and the 2026-10-29 AutoDream workflow.
 
 Use Prime `5c898d1b27b109bd2d383c68d60a30536e39cc22`'s `HarnessState`,
 `HarnessEntry`, proposal actions and before/after history as the schema baseline

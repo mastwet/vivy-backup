@@ -23,6 +23,15 @@ Octos reuse is now limited to official QQ, with NapCat QQ separately selected
 for active browsing using its existing data interfaces. These are scope and
 schedule decisions, not implementation evidence.
 
+Owner update, 2026-10-31: DESIGN's
+[Laputa protocol decision](../DESIGN.md#laputa-protocol-and-garden-governance-decision-owner-2026-10-31)
+repositions Laputa as a persona/memory-governance specification with host-native
+implementations. Recap belongs to the agent/harness; full MemPalace remains the
+current long-term backend, with future replacement possible. Garden adapts its
+closed-loop collection/update workflow to native host authority files and
+evolution rather than establishing parallel stores. New adapter implementations
+and a unified management console are not delivered by this inventory update.
+
 ## How to read the matrix
 
 The **scope** column describes decisions actually made for the new Vivy:
@@ -121,11 +130,11 @@ does not establish a selected server in either Go main/stable or vivy-test.
 | --- | --- | --- | --- | --- |
 | Layered context / working-context assembly | G1 `context.go`, G5 #58 | Keep | Partial | Project instructions and coding compaction exist; planned durable layering is not implemented. |
 | Workspace instruction files and system prompt additions | G1 `agentsmd.go`; N1 context | Keep | Yes | Current discovery covers AGENTS/CLAUDE and prompt overrides with trust; older Go choices differ. |
-| Laputa persona/identity and context authority | G1 persona/cognitive, G2 persona | Keep | No | Owner chose a rewrite; exact library/API and persona-management UX remain open. |
-| ACTMEM / cross-session resident Recap for companion | G1 `recap_*`, G2 recap, G5 #58 | Keep | No | Durable path; coding does not automatically inherit mysoul's recap-only policy. |
+| Laputa persona/identity and context authority | G1 persona/cognitive, G2 persona | Keep | No | Specification/protocol with a preferred minimal native Rust persona implementation; update API, representation and injection boundary remain open. No mandatory Garden runtime or duplicate persona store. |
+| ACTMEM / cross-session resident Recap for companion | G1 `recap_*`, G2 recap, G5 #58 | Keep | No | Agent/harness-owned working context; Laputa does not require its own Recap engine. Durable path; coding does not automatically inherit mysoul's recap-only policy. |
 | Recap revision, source association and commit before unload | G1 `recap_compaction.go`, G5 #58 | Keep | No | Preserve the behavior/invariant; do not assume the old storage schema must be copied. |
 | View, correct, edit and targeted forget of Recap | G1 memory actions/UI, G5 #58 | Keep | No | Memory is user-manageable in the retained direction; exact interface is undecided. |
-| Full upstream MemPalace engine in Python | N5; owner decision | Keep | No | Native adapter and write/chunk/read equivalence remain untested; do not inject L0 identity. |
+| Full upstream MemPalace engine in Python | N5; owner decision | Keep | No | Dated inventory status; consult HANDOFF for later native delivery. Remains the current backend; future replaceability does not select a Mem0 adapter or migration. Do not inject L0 identity. |
 | Shared long-term memory by palace/wing/room/drawer | N5; owner decision | Keep | No | Domain partitions span both harnesses; filtering is not an access-control system. |
 | Recall on demand with bounded source-backed results | G5 #60; N5 mysoul | Keep | No | Scope and source identity must survive direct library integration. |
 | Memory ingestion, automatic archive and consolidation policies | G1 cognitive/memory; G5 #58/#60 | Decide | No | Exact triggers, dedup, updates and failure handling need an actual end-to-end selection. Recap commit ordering above remains retained. |
@@ -138,7 +147,7 @@ does not establish a selected server in either Go main/stable or vivy-test.
 | Obsidian/Vault import, subscriptions and sync | G5 #63 | Decide | No | The new loop is selected, but its exact source ingestion and watcher semantics are not. |
 | Old Notebook: durable notes, editor and source linking | G1 notebook modules, G2 notebook | Exclude | No | Do not migrate the old product; the new MemPalace/Obsidian direction is separate. |
 | Old scheduled daily/weekly/monthly Reports product | G1 reports, G2 reports, G5 #5 | Exclude | No | Do not migrate the old product; future Python capabilities are not thereby specified. |
-| Old AutoDream candidate reflection | G5 #6 | Exclude | No | Do not migrate it; the new Prime-style evolution chain is outside Vivy and not yet designed. |
+| Old AutoDream candidate reflection | G5 #6 | Exclude | No | Do not migrate it. The new Vivy AutoDream workspace/candidate/automatic-adoption decision is retained; reusable Garden governance workflows adapt to each host's native authority. |
 | Old Skill evolution proposals, review and revision | G2 skill-evolution; G5 #64/#72 | Exclude | No | Do not migrate the old evolution path; ordinary Skill discovery/use remains selected. |
 | Persona evolution / EvoMap / strategy composition | G1 cognitive, G5 #7/#72 | Exclude | No | Do not migrate the old evolution stack into Vivy; an independent new chain is a later design. |
 

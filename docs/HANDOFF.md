@@ -1,5 +1,32 @@
 # Handoff: continue the independent assembly experiment
 
+## Laputa protocol and native governance checkpoint (2026-10-31)
+
+Read DESIGN's
+[Laputa protocol and Garden governance decision](DESIGN.md#laputa-protocol-and-garden-governance-decision-owner-2026-10-31)
+before continuing persona, memory or evolution design. The owner repositions
+Laputa as a specification/protocol with host-specific implementations. Vivy's
+preferred direction is a small native Rust persona component with read/update
+operations and top-level persona-context injection. A complete Garden/Go runtime
+or external service is not required. Exact APIs and persona format remain open.
+
+The agent/harness owns Recap/ACTMEM. Full Python-native MemPalace remains the
+current long-term engine; later backend replacement, such as Mem0, is an
+architecture goal, not an implemented adapter or migration. Do not duplicate
+persona in Prime harness entries or inject MemPalace L0.
+
+Garden remains an optional reusable governance workflow for other agents: collect
+corpus, run a selected agent, apply updates to the host's existing authority,
+verify effective changes and retain outcomes. Respect native files/evolution
+instead of establishing parallel persona or Recap stores. Vivy AutoDream retains
+automatic candidate adoption; other hosts keep their own write policies. Hermes
+and OpenClaw are intended adapter examples, not verified integrations. A Web
+console and Garden control of Vivy's internal Laputa remain later discussion.
+
+This direction is synchronized to the local Garden/Laputa project's ADR-0016.
+Documentation only: no new runtime, backend, adapter, durable work or inbox work
+is delivered; the owner-deferred real-provider workbench gate remains unchanged.
+
 ## Inbox scheduling checkpoint (2026-10-31)
 
 The owner defers the official inbox plugin and its notification/hook and durable-
@@ -192,9 +219,10 @@ The owner's latest priority is to close the new Python workbench's design,
 implementation and system validation first, using coding as its first consumer;
 only then start durable and verify its integration with the workbench.
 Both paths use the same workspace and may recall the same domain-partitioned
-MemPalace memory. Laputa owns persona; do not inject MemPalace's L0 identity.
-Durable's layered context and ACTMEM/Recap remain a later memory slice; do not
-apply mysoul's companionship context policy to coding by default. Domain wings,
+MemPalace memory. The host's Laputa implementation owns persona; do not inject
+MemPalace's L0 identity. The agent/harness owns Recap/ACTMEM; durable's layered
+context remains a later memory slice. Do not apply mysoul's companionship context
+policy to coding by default. Domain wings,
 topic rooms and source drawers are distinct from the optional L0-L3 context
 stack. Preserve per-task state/namespace boundaries within the shared workspace.
 Recursion, factory, a complete Prime daemon and automatic evolution are not
