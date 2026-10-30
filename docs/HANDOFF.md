@@ -1,5 +1,26 @@
 # Handoff: continue the independent assembly experiment
 
+## Current priority: one Vivy core, validate through Coding (2026-10-31)
+
+Read DESIGN's
+[single-core decision](DESIGN.md#single-vivy-core-and-infrastructure-first-decision-owner-2026-10-31)
+first. The owner settles one Vivy technical foundation and prioritizes completing
+agent infrastructure using the existing coding face for actual validation.
+Reuse the working Rust components, with Pi durable as the persistent-lifecycle
+reference and the accepted Laputa, Recap, MemPalace and AutoDream boundaries.
+Keep workload-specific state and recovery contracts explicit in this core.
+
+The role entry, session-menu layout, independent-session navigation, assistant-
+first delegation and Diva desktop/pet/bundle form remain **undecided and parked**.
+The owner explicitly withdrew those topics from the immediate decision scope.
+Do not treat the earlier conversational confirmation as an approved UI design,
+inspect the old Vivy/Diva projects, or make a new interface a prerequisite.
+
+Next identify the infrastructure gaps and define the smallest behavior to build
+and verify through the current coding face. This decision delivers no runtime
+code or new test evidence; outstanding provider acceptance remains recorded,
+and the official inbox implementation remains deferred.
+
 ## Durable design preparation and Pi refresh (2026-10-31)
 
 The owner now explicitly starts persistent-assistant design preparation, with
@@ -241,12 +262,14 @@ claim M3 complete or start durable before that system gate is accepted.
 
 The owner wants a fast Rust experiment preserving Vivy's useful idea of a species
 assembled from a YAML recipe at compile time. Rig supplies the current coding
-implementation. Model access is gateway first. The owner's 2026-10-27 direction
-is two independent harness paths: classic Pi for coding, pi-durable for durable
-execution and persistent companionship. Coding has passed real-task acceptance.
-The owner's latest priority is to close the new Python workbench's design,
-implementation and system validation first, using coding as its first consumer;
-only then start durable and verify its integration with the workbench.
+implementation. Model access is gateway first. The latest 2026-10-31 decision
+settles one Vivy core: complete agent infrastructure and validate it through the
+existing coding face. Classic Pi remains the coding reference and pi-durable
+anchors persistent lifecycle behavior within that shared technical foundation.
+Product entry points and Diva packaging are deferred. Coding has passed initial
+real-task acceptance; the new durable behavior still needs its own execution
+evidence. The delivered Python workbench and native MemPalace integration remain
+available, with their deferred real-provider acceptance recorded above.
 Both paths use the same workspace and may recall the same domain-partitioned
 MemPalace memory. The host's Laputa implementation owns persona; do not inject
 MemPalace's L0 identity. The agent/harness owns Recap/ACTMEM; durable's layered
@@ -255,8 +278,9 @@ policy to coding by default. Domain wings,
 topic rooms and source drawers are distinct from the optional L0-L3 context
 stack. Preserve per-task state/namespace boundaries within the shared workspace.
 Recursion, factory, a complete Prime daemon and automatic evolution are not
-prerequisites. See DESIGN's **Separate durable and coding harnesses** for the
-current scope. No second harness or new memory implementation is delivered yet.
+prerequisites. Read DESIGN's **Single Vivy core and infrastructure-first decision**
+before the historical two-harness discussion. Durable infrastructure is not yet
+delivered; this decision does not change that implementation status.
 
 ### Saved discussion checkpoint (2026-10-27)
 

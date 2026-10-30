@@ -1,5 +1,43 @@
 # Decisions and assembly direction
 
+## Single Vivy core and infrastructure-first decision (owner, 2026-10-31)
+
+**Status: accepted direction.** The technical foundation is one Vivy core.
+The immediate priority is completing agent infrastructure and validating it
+through the existing **coding face**, the current user-facing coding interface.
+This supersedes any reading of the earlier two-harness discussion as a decision
+to build separate underlying engines or to require a new product interface
+before validating persistent-agent capabilities.
+
+Extend the current Rust foundation and reuse its working components. Keep
+workload-specific context, task ownership, recovery and cancellation contracts
+explicit within the shared infrastructure. Pi durable remains the lifecycle
+reference; mysoul supplies basic-loop evidence. Laputa persona governance,
+agent-owned Recap, the current full MemPalace backend and AutoDream retain their
+accepted responsibilities. YAML recipes continue to select compiled components.
+Concrete implementation details and bounded acceptance cases are engineering
+work within this direction; the single-core choice is settled.
+
+Use the current coding face to exercise actual model/tool execution and the
+infrastructure being added, including persistence, task recovery, context,
+persona and memory integration. Record representative failure and cancellation
+behavior as those capabilities change. Existing coding success alone does not
+establish the new durable guarantees, and this decision does not retroactively
+pass the deferred workbench real-provider gate.
+
+**Product form and navigation remain undecided and outside the immediate work.**
+This includes a unified role entry at the top of the session menu, its relation
+to independent coding sessions, an assistant-first delegation experience, and
+Diva's desktop/pet/integration-bundle packaging. The owner explicitly parked
+these questions after the initial discussion; do not record that discussion as
+an approved UI or product architecture. No old Vivy or Diva checkout inspection
+or migration is needed for this work.
+
+This is a decision record, not a delivered infrastructure implementation. The
+official inbox remains scheduled for a later phase. Next work should identify
+the infrastructure gaps and close a bounded, testable loop through the current
+coding face, without making product-shape decisions its prerequisite.
+
 ## Laputa protocol and Garden governance decision (owner, 2026-10-31)
 
 **Status: accepted architecture direction; implementation pending.** Apply
@@ -611,9 +649,9 @@ addition and its verification. This does not expand the parked Goal/evolution wo
 | --- | --- |
 | Independent Rust test repository | No dependency on the original Vivy repository or its recovery work. |
 | YAML recipe and compile-time composition are the central experiment | The recipe determines selected plugin dependencies and static constructor calls. |
-| Separate coding and durable harnesses | Establish and verify their lifecycle contracts independently before extending them. |
+| One Vivy core with explicit coding and durable lifecycle contracts | Complete shared agent infrastructure and verify its capabilities through the existing coding face; product entry points remain undecided. |
 | Shared workspace and partitioned memory | Both paths use the same workspace; memory is organized by domain/topic, with persona owned by Laputa. |
-| Rig is the current coding implementation foundation | Reuse its existing execution, session and terminal components; the durable implementation choice remains open. |
+| Rig is the current coding implementation foundation | Reuse its existing execution, session and terminal components while completing the single Vivy core; use pi-durable to anchor persistent lifecycle behavior. |
 | Classic Pi is the coding reference; pi-durable is the durable reference | Coding preserves its interactive task/tool path; durable follows persistent task, checkpoint and wake semantics. |
 | Rust/Vivy extension equivalents | Do not implement compatibility with existing Pi TypeScript extension source. |
 | Gateway-first model access | First integrate one gateway; avoid rebuilding individual provider login, routing, and catalog infrastructure. |
@@ -622,7 +660,7 @@ addition and its verification. This does not expand the parked Goal/evolution wo
 | Hybrid direct tools and Python workbench | Frequent coding tools remain direct; MCP and programmable composition live in Python. |
 | PEN capability packages and separate NeuroLink protocol | Importable packages deliver external capabilities; NeuroLink handles external conversations/events and loads channel packages ported from Octos. Minecraft starts with independent multiplayer; client control remains a second design route. See the locked 2026-10-30 decision above. |
 | Native delegation; optional Python orchestration later | Recipe-selected Rig wrapper provides single tasks, bounded parallel batches and chains. Python/apixis remains a later composition direction. See the dated subagent delivery record. |
-| Validate the Python workbench before starting durable | Coding has passed real-task acceptance. Close the new workbench's design and system validation first; then establish durable and verify its workbench integration. |
+| Validate agent infrastructure through the current coding face | Coding has passed its initial real-task acceptance. Follow the 2026-10-31 infrastructure-first decision for new work and keep outstanding workbench provider evidence and new durable acceptance explicit. |
 
 The full Pi baseline is a coverage target, not the first delivery's acceptance
 gate. Gateway-first access intentionally defers Pi's broad direct-provider and
@@ -660,7 +698,13 @@ file rewind is not the already-selected conversation rewind.
 
 ## Separate durable and coding harnesses (owner, 2026-10-27)
 
-The owner separates two product paths, with independent harness work:
+Scope clarification, 2026-10-31: read this section under the
+[single-core decision](#single-vivy-core-and-infrastructure-first-decision-owner-2026-10-31).
+The lifecycle distinctions below remain useful requirements within one Vivy
+core. Product entry points and session navigation are deferred; this historical
+section does not select separate underlying engines.
+
+The earlier discussion identified these two execution workloads:
 
 | Path | Main reference | Required distinction |
 | --- | --- | --- |
