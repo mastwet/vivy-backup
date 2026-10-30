@@ -2282,3 +2282,129 @@ boundaries are in [DESIGN's AutoDream decision](../DESIGN.md#autodream-evolution
 The evidence and comparisons in sections 20-22 remain historical research.
 No AutoDream code, activation behavior or new acceptance result is delivered
 by this documentation update.
+
+## 24. Digital-resident research and idle-autonomy default (2026-10-31)
+
+**Owner decision:** generic idle autonomous activity defaults off and is enabled
+on demand. **Owner priority signal:** a game-world digital resident may be a key
+delivery this phase. The owner requests research before further discussion;
+resident behavior, backend choice and acceptance scope below are proposals.
+Minecraft independent multiplayer remains selected; real-client control remains
+a second design route. No original Vivy/Diva checkout or private runtime data
+was accessed. No additional reference repository was cloned.
+
+### Papers and what they establish
+
+| Primary source | Relevant finding | Boundary for Vivy |
+| --- | --- | --- |
+| [Generative Agents (2023)](https://arxiv.org/html/2304.03442v2) | Plans, retrieved experiences and reflection support consistent daily and social behavior; observations can cause replanning. | Its structured Smallville environment is not proof of reliable Minecraft navigation or survival. Reuse the behavior ideas with Laputa, Recap and MemPalace. |
+| [Voyager (2023)](https://arxiv.org/html/2305.16291v2) | Curriculum, executable skills and environment/error feedback support open-ended progression. | Progression and skill acquisition do not by themselves deliver a resident's daily life. No need to import another model loop or require online code generation in the first slice. |
+| [Project Sid (2024), sections 2-3](https://arxiv.org/html/2411.00114v1) | Slow deliberation and fast action run concurrently, with a common high-level controller to keep speech and actions coherent. | Borrow the separation of timescales and shared action truth; do not reproduce its ten modules or many-agent society as a first-release requirement. |
+| [TickingCollab (2026)](https://arxiv.org/html/2606.15684v1) | Dynamic Minecraft tasks expose inference latency as a failure source in real-time execution. | Measure response latency in a running world; task success in paused or stepped environments is insufficient. |
+| [A team of Gemini 4 Argon agents beats Minecraft (2026-10-15)](https://arxiv.org/html/2610.22319v1) | Reports general coding agents controlling players through Mineflayer for a long task. | Supports testing our existing coding core in-game. The paper reports one run, many failures and privileged structured perception; it does not establish robust residency or pixel-based play. |
+| [SIMA 2 (2025)](https://deepmind.google/blog/sima-2-an-agent-that-plays-reasons-and-learns-with-you-in-virtual-3d-worlds/) | Studies general game interaction through visual and keyboard/mouse interfaces. | Relevant to the retained real-client route. The official announcement describes limited research access; no available drop-in Vivy dependency was established. |
+
+### Engineering candidates inspected read-only
+
+**Mineflayer** at `5a252e6d258882b042e60e21c37d552cdf3b3380` and
+**mineflayer-pathfinder** at `b07a419a4181d242bc4b9f8648a4f624e587c18f`
+provide the lower-level bot and navigation substrate. Their
+[API overview](https://github.com/PrismarineJS/mineflayer/blob/5a252e6d258882b042e60e21c37d552cdf3b3380/docs/README.md)
+describes structured world observations, inventory and movement. Perception
+coverage differs from a human client; do not claim the two routes are equivalent.
+
+**Mindcraft** at `e1c1fc3ffa481506c2445fc639e16dba504b5920` includes
+[fast modes](https://github.com/mindcraft-bots/mindcraft/blob/e1c1fc3ffa481506c2445fc639e16dba504b5920/src/agent/modes.js),
+[action control](https://github.com/mindcraft-bots/mindcraft/blob/e1c1fc3ffa481506c2445fc639e16dba504b5920/src/agent/action_manager.js)
+and an [NPC controller](https://github.com/mindcraft-bots/mindcraft/blob/e1c1fc3ffa481506c2445fc639e16dba504b5920/src/agent/npc/controller.js).
+Source includes preservation/unstuck behaviors, interruptible skills and a
+daytime-goal/nighttime-home routine. It also owns prompts, conversation history,
+self-prompting and model providers. Selected behavior/code reuse is a candidate;
+importing the complete agent would duplicate Vivy's authority. These modules
+depend on Mindcraft's agent/settings/state, not an established standalone SDK.
+
+**Mine AI MCP** at `95fe7572f8931f8afb4e002d9fac165ad2858f72` is the preferred
+candidate for an initial integration evaluation. Its
+[architecture](https://github.com/aibengineering/mine-ai-mcp/blob/95fe7572f8931f8afb4e002d9fac165ad2858f72/docs/mcp/concepts.md)
+leaves strategy to the caller while providing observation, navigation, actions,
+single-body ownership and a separate action-history database. That database is
+game execution evidence, not another Laputa/Recap/long-term-memory authority.
+It is a possible PEN-owned capability service, not a replacement Vivy runtime.
+
+The [async contract](https://github.com/aibengineering/mine-ai-mcp/blob/95fe7572f8931f8afb4e002d9fac165ad2858f72/docs/mcp/async-actions.md)
+and [implementation](https://github.com/aibengineering/mine-ai-mcp/blob/95fe7572f8931f8afb4e002d9fac165ad2858f72/src/runner/async-actions.ts)
+provide submission IDs, bounded waits, retained results and targeted cancellation.
+Acceptance is not completion. Cancelling a client wait does not cancel the game
+action. New foreground work is gated on retrieval of the preceding result.
+On service restart, unfinished actions become explicit `RUNTIME_INTERRUPTED`
+failures with uncertain world effects; they are not automatically replayed.
+Vivy must reconcile those outcomes rather than treating the adapter as providing
+phase-level replay of every external effect.
+
+The [survival subsystem](https://github.com/aibengineering/mine-ai-mcp/blob/95fe7572f8931f8afb4e002d9fac165ad2858f72/src/survival/control/driver.ts)
+arbitrates fast responses separately from model reasoning. Its
+[guide](https://github.com/aibengineering/mine-ai-mcp/blob/95fe7572f8931f8afb4e002d9fac165ad2858f72/docs/survival/README.md)
+also records unqualified full-job scenarios; source presence is not blanket
+survival reliability. The [limitations](https://github.com/aibengineering/mine-ai-mcp/blob/95fe7572f8931f8afb4e002d9fac165ad2858f72/docs/mcp/limitations.md)
+include no autonomous roaming/planning and no automatic distinction between
+natural obstacles and player-built walls during navigation. A shared-home test
+needs an appropriate movement/building policy before exposing valued structures.
+The [setup](https://github.com/aibengineering/mine-ai-mcp/blob/95fe7572f8931f8afb4e002d9fac165ad2858f72/README.md)
+uses Bun, Streamable HTTP MCP and pinned dependency forks, with Minecraft Java
+Edition 1.21.4 reported tested upstream. Vivy/Windows installation, schema compatibility,
+authentication, cancellation and long-call behavior remain untested.
+
+### Proposed implications for discussion
+
+- Treat an explicitly started resident activity as ongoing work in one world,
+  separate from the generic idle-autonomy toggle. Starting, pausing and ending
+  residency must have clear ownership and stop rules; none is implemented here.
+- Keep one Vivy high-level decision path with Laputa, agent-owned Recap and
+  MemPalace. Put fast perception/action/reflex execution in the game PEN's
+  controller. NeuroLink carries admitted chat/events; it does not own scheduling.
+- Supply a current, timestamped world snapshot and meaningful changes rather
+  than every game tick. Persist world/player identity, places, commitments and
+  selected experiences; reobserve volatile health, inventory and positions.
+- Long actions need bounded observation/cancellation points. Explicit async
+  submit/wait/cancel is a candidate: a returned handle must remain pending in
+  task state. Preserve the single-tool handoff rule and human immediate stop;
+  document emergency controller preemption separately from ordinary chat hooks.
+- Maintain one owner of physical action. A survival response may preempt a
+  requested action under declared policy, with an observed outcome delivered to
+  the main agent. Prevent speech, movement and stale plans from asserting
+  incompatible completed actions.
+- Separate wall-clock deadlines from game-day routines. On reconnect, reconcile
+  the actual world and action receipts before replanning; do not replay block
+  placement or invent experiences during offline time.
+- Keep the game connection's lifetime explicit. A Python cell timeout, MCP
+  transport cancellation, agent pause and game-service shutdown are different
+  operations. The existing workbench may call the capability without becoming
+  the authority for the body's lifetime. Exact transport/ownership is still open.
+
+### Alternatives and first acceptance proposal
+
+1. **Evaluate the existing MCP action service first (recommended).** Use the
+   existing workbench MCP path and add only the PEN packaging, lifecycle and
+   resident policy actually needed. Validate the candidate's integration gaps
+   before selecting it; do not copy its internals preemptively.
+2. **Assemble Mineflayer plugins and selected Mindcraft behavior.** More control
+   of routines and perception, with more action/adapter maintenance. Use if the
+   ready service has a concrete blocker, not as a parallel first implementation.
+3. **Real-client screen/input control.** Preserve this capability route; its
+   latency, perception and control requirements make it a separate acceptance
+   case rather than an additional gate for independent multiplayer.
+
+Proposed first case: one independent resident with a home and a bounded daily
+activity (for example gathering and storing supplies), identifiable encounters
+with the owner, a game-time routine, interruption, reconnect and retained
+experience. Choose home-based life versus a travelling companion with the owner
+before freezing the task. A one-day scenario plus a longer unattended soak can
+measure progress, repeated loops, deaths/stalls, handoff latency and model calls
+per hour. No throughput, reliability, cost or delivery-date guarantee is inferred.
+General swarm society, a civilization simulator, full visual gameplay and new
+persona/memory engines are not implied requirements. General inbox/hooks remain
+deferred; the first game only needs its concrete observation/control path.
+
+**Verification:** primary papers, upstream documentation, source and test
+definitions inspected. No dependencies installed, game/MCP service started,
+tests run or actual provider/gameplay behavior verified in this research.

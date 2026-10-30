@@ -501,6 +501,14 @@ bindings must not fall back to `Entity` or the string `unsaved` as storage IDs.
 
 #### 8. Sleep, wake and host lifetime
 
+**Owner decision (2026-10-31): idle autonomous activity is disabled by default
+and enabled on demand.** This default does not disable continuation of an
+explicitly admitted task. The owner also identifies a game-world digital
+resident as a possible key delivery for this phase. Its activity contract and
+acceptance scope remain under discussion; do not infer an always-on global
+autonomy default from that scenario. See the
+[resident research](research/2026-10-25-hybrid-agent-workbench-decisions.md#24-digital-resident-research-and-idle-autonomy-default-2026-10-31).
+
 Save a one-shot wake with its task transition to `waiting`. The local host arms
 one timer for the earliest deadline and rechecks persisted generations on fire.
 Committing `WakeFired` and its queued input occurs in the same agent checkpoint.
@@ -860,6 +868,14 @@ separate concern from copying all QQ history. Its delivery timing is governed
 by the later-phase inbox decision above.
 
 ### First game: Minecraft, independent multiplayer first
+
+**Priority update (owner, 2026-10-31).** A digital resident in the game may become
+one of this phase's key deliveries. Research now informs the task/scheduling
+design rather than treating embodiment solely as a distant adapter. The exact
+resident behavior and delivery commitment are not yet selected. The
+[research comparison](research/2026-10-25-hybrid-agent-workbench-decisions.md#24-digital-resident-research-and-idle-autonomy-default-2026-10-31)
+recommends evaluating an existing Minecraft MCP action runtime first; this is
+not a locked implementation choice or a successful gameplay test.
 
 Minecraft is selected as the first PEN game integration. The owner prioritizes
 Vivy joining multiplayer as an independent player. Controlling a Minecraft

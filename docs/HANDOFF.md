@@ -1,5 +1,20 @@
 # Handoff: continue the independent assembly experiment
 
+## Idle autonomy default and digital-resident research (2026-10-31)
+
+The owner selects idle autonomous activity off by default, enabled on demand,
+and identifies a game-world digital resident as a possible key delivery this
+phase. Read the [resident research](research/2026-10-25-hybrid-agent-workbench-decisions.md#24-digital-resident-research-and-idle-autonomy-default-2026-10-31)
+before settling scheduling behavior. Independent Minecraft multiplayer remains
+the first game route; resident scope, edition/version and backend remain open.
+The research recommends evaluating `aibengineering/mine-ai-mcp` as an existing
+action/reflex runtime behind the PEN, retaining Vivy as the only assistant
+decision/persona/memory owner. Mindcraft and the cited papers provide additional
+behavior and controller references. Treat active residency, background actions,
+short tool boundaries and emergency body control as explicit design questions;
+the official inbox and general hooks remain deferred. No game dependency was
+installed, source cloned, server started or gameplay/provider test run.
+
 ## Recap ownership and Rig reuse accepted (2026-10-31)
 
 The owner accepts the [Recap responsibility split](DESIGN.md#recap-ownership-and-rig-reuse-owner-2026-10-31).
