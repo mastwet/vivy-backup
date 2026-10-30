@@ -1,5 +1,24 @@
 # Handoff: continue the independent assembly experiment
 
+## Recap ownership and Rig reuse accepted (2026-10-31)
+
+The owner accepts the [Recap responsibility split](DESIGN.md#recap-ownership-and-rig-reuse-owner-2026-10-31).
+Reuse Rig's existing summarization/compaction infrastructure. Rust owns formal
+context composition, budgets, tool pairing, effective Recap and its publication
+and recovery. Add only the assistant-specific summary policy, update triggers
+and source checks that existing Rig facilities do not supply. The current
+recipe already enables `CompactionPlugin`; this decision does not add another
+summary engine or outsource context authority to Python.
+
+Keep MemPalace and optional source/experience preparation in the Python
+workbench. A future Python summary candidate must be checked and adopted by
+Rust; no new bridge or parallel Recap database is required now. Laputa and
+AutoDream ownership remain as previously accepted. Exact trigger/retention
+settings, Recap-only versus a bounded unsummarized tail, and cross-session
+subject projection remain open. This is a documentation decision backed by
+source inspection, with no implementation, dependency upgrade or new runtime
+verification. The detailed proposal below remains subject to this decision.
+
 ## Rig reuse and upstream contribution assessment (2026-10-31)
 
 The owner emphasizes direct Rig reuse and upstream contributions to reduce

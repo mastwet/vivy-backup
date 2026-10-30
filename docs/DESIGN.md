@@ -2,8 +2,9 @@
 
 ## Plan B: durable execution within the existing Rig chain (owner, 2026-10-31)
 
-**Status: selected architecture direction; the detailed design below is proposed
-for review, and implementation is pending.** The owner selects Plan B from the
+**Status: selected architecture direction; the detailed design below remains
+proposed except for explicitly accepted decisions, and implementation is pending.**
+The owner selects Plan B from the
 architecture alternatives. Complete one Vivy core by adding persistent execution
 phases, commit boundaries, recovery and sleep/wake behavior within the existing
 Rust/Rig execution chain. Validate
@@ -83,6 +84,52 @@ This decision delivers no code or new runtime evidence and does not close
 deferred real-provider checks.
 The official inbox, general DAG/distributed scheduling and product navigation
 are not prerequisites for the first slice; existing scope exclusions remain.
+
+### Recap ownership and Rig reuse (owner, 2026-10-31)
+
+**Status: accepted responsibility split and reuse direction; implementation is
+pending.** Reuse Rig's conversation summarization infrastructure for Recap.
+Rust owns the effective context and Recap publication/recovery; the Python
+workbench owns existing long-term memory integration and may assist with
+content preparation. Mysoul remains the behavioral reference.
+
+| Responsibility | Owner and selected approach |
+| --- | --- |
+| Context composition, budgets and tool-call/result pairing | Rust / Rig, reusing existing conversation and compaction mechanisms |
+| Effective Recap, source coverage and publication/recovery | Rust, preferring Rig's existing saved-state and conversation facilities |
+| Summary content, update triggers and recent-message retention | Small Vivy policy extensions over Rig; no second execution loop |
+| Long-term memory search/write, source cleaning and batch organization | Existing Python workbench / MemPalace |
+| Optional complex experience analysis and AutoDream material preparation | Python where useful; adopted state still passes through its authoritative owner |
+
+The current recipe already selects `rig_basics::compaction::CompactionPlugin`.
+At recipe pin `e1cd47d57f0bccb50ddffd6f45de2ac3365b271c`, Rig provides
+`SummaryState`, `Summarizer`, configurable summary prompts and recent-message
+retention, tool-pair-aware cuts, and logged summary replacement with undo.
+Summary model calls participate in the existing cancellation/retry chain.
+These facilities also exist at inspected upstream main
+`fc556f982d501eea9d7167398a19386e4884e776`. See the pinned
+[summary primitives](https://github.com/0xPlaygrounds/rig/blob/e1cd47d57f0bccb50ddffd6f45de2ac3365b271c/crates/rig-memory/src/compaction.rs),
+[compaction plugin](https://github.com/0xPlaygrounds/rig/blob/e1cd47d57f0bccb50ddffd6f45de2ac3365b271c/plugins/rig-basics/src/compaction.rs)
+and our existing [branch-summary reuse](../plugins/vivy-basics/src/branch.rs).
+
+Rig's default compaction keeps a conversation within the model window. It does
+not by itself establish a persistent subject's Recap policy, cross-session
+continuity or the stronger durable commit guarantees required above. Begin by
+adapting summary prompts and retention policy, then add the necessary assistant
+update triggers and source/publication checks in the same execution chain.
+The exact trigger, Recap-only versus a bounded not-yet-summarized conversation
+tail, and any cross-session subject projection remain design choices.
+
+Do not outsource the complete context authority to Python or introduce a
+parallel Recap database. If a demonstrated need calls for Python-generated
+summary candidates, Rust checks their source revision/coverage before adopting
+them. That bridge is optional, not a prerequisite for the first slice. Python
+variables are ephemeral across worker restart; existing MemPalace storage stays
+authoritative for long-term memory. Laputa's native persona authority and
+AutoDream's separate context and automatic validated adoption remain unchanged.
+
+This records source inspection and an owner decision, not new runtime tests,
+implemented assistant Recap, a dependency upgrade or a measured cost reduction.
 
 ### Detailed architecture proposal (2026-10-31)
 
@@ -423,8 +470,11 @@ next *new* model operation, never halfway through a request. A retry of an old
 operation uses its pinned context; deliberate replanning creates a new step.
 AutoDream uses its separate Dream prompt without the conversational persona.
 
-Recap is agent-owned saved state: revision, covered conversation boundary,
-summary, current goal and evidence references. Update it only against the
+The accepted [Recap reuse decision](#recap-ownership-and-rig-reuse-owner-2026-10-31)
+governs implementation ownership here. The proposed Recap metadata is agent-owned
+saved state: revision, covered conversation boundary, summary, current goal and
+evidence references, reusing Rig facilities rather than creating a parallel store.
+Update it only against the
 expected source boundary; discard/recompute a stale candidate. Preserve current
 tool-call/result pairs until closed. Keep the existing coding context/compaction
 policy as the initial policy. The mysoul-inspired compact policy can later use
