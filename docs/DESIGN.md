@@ -72,8 +72,46 @@ to a new protocol-level supervisor.
 PEN and NeuroLink can serve the same integration without becoming the same
 thing: a game PEN can deliver observation/action tools and game Skills, while
 its connector exchanges chat and game events through NeuroLink. Prefer existing
-channel adapters over developing platform integrations from scratch. ZeroClaw
-is a reuse candidate, not a selected runtime or verified dependency.
+channel adapters over developing platform integrations from scratch. The final
+channel-source and loading decision is recorded below.
+
+### Channel packages: port Octos and load through NeuroLink
+
+**Final owner ruling, 2026-10-30:**
+[Octos](https://github.com/octos-org/octos) is the selected source for porting/
+adapting the channel-package capability. NeuroLink is the loading and integration
+entry for the resulting channel packages. This replaces the earlier ZeroClaw
+candidate; donor selection is closed unless the owner explicitly changes it.
+
+The selected scope is Octos's channel implementations and the shared support
+needed to adapt them to Vivy. It does not select Octos's agent kernel, model
+providers, sessions, scheduler or OUP as Vivy's runtime/protocol. The NeuroLink
+host implementation loads and connects the adapted packages, translates inbound
+messages/events and routes outbound exchanges to the channel implementation.
+Actual execution and resource ownership remain with the responsible host/module;
+the protocol does not become an agent lifecycle or attention supervisor.
+
+The inspected source is Octos commit
+[`7486f3df54b5803ec4095c60b244617c9d254750`](https://github.com/octos-org/octos/commit/7486f3df54b5803ec4095c60b244617c9d254750):
+
+- [`crates/octos-bus/src/channel.rs`](https://github.com/octos-org/octos/blob/7486f3df54b5803ec4095c60b244617c9d254750/crates/octos-bus/src/channel.rs)
+  defines the `Channel` interface and channel manager using inbound/outbound
+  message types.
+- [`crates/octos-bus/Cargo.toml`](https://github.com/octos-org/octos/blob/7486f3df54b5803ec4095c60b244617c9d254750/crates/octos-bus/Cargo.toml)
+  defines platform-specific channel features.
+- [`crates/octos-bus/src/lib.rs`](https://github.com/octos-org/octos/blob/7486f3df54b5803ec4095c60b244617c9d254750/crates/octos-bus/src/lib.rs)
+  also exposes session, cron and heartbeat facilities, so the crate boundary is
+  broader than the selected channel port.
+
+Here, `channel-package` names the intended Vivy integration unit; source
+inspection does not establish an upstream standalone package that NeuroLink can
+already load unchanged. The exact extraction/adapter boundary, package format,
+loading API and first platform subset remain engineering work. Native Rust
+components still follow recipe selection and rebuilding; "load through
+NeuroLink" does not by itself select dynamic-library hot-loading.
+
+No Octos code was cloned, ported, built or run for this decision. Source
+inspection is not channel compatibility, lifecycle or platform acceptance.
 
 ### First game: Minecraft, independent multiplayer first
 
@@ -124,9 +162,8 @@ Supporting references inspected during this discussion:
   [mineflayer-pathfinder](https://github.com/PrismarineJS/mineflayer-pathfinder)
   provide candidate game interfaces and navigation; their availability does not
   establish Vivy integration, edition/version compatibility or Windows acceptance.
-- [ZeroClaw's channel crate](https://github.com/zeroclaw-labs/zeroclaw/tree/1c1cd118ac536a1dd1bc79b9cce69cbdc04e4f29/crates/zeroclaw-channels)
-  is a channel-adapter reuse candidate; its dependency/lifecycle fit still needs
-  verification.
+- The pinned Octos channel sources in the final ruling above are the selected
+  donor. Their availability does not establish a completed or verified port.
 
 This delivery records decisions only. No PEN loader/package, NeuroLink protocol
 implementation or Minecraft integration is delivered or run. It does not start
@@ -455,7 +492,7 @@ addition and its verification. This does not expand the parked Goal/evolution wo
 | Run first; keep mechanisms inexpensive | The first end-to-end coding task precedes a generalized plugin platform. |
 | Skip species hashes and a standalone SDK | No content-addressed species identity, sealed manifests, attestation, or public SDK release work. |
 | Hybrid direct tools and Python workbench | Frequent coding tools remain direct; MCP and programmable composition live in Python. |
-| PEN capability packages and separate NeuroLink protocol | Importable packages deliver external capabilities; NeuroLink handles external conversations/events. Minecraft starts with independent multiplayer; client control remains a second design route. See the locked 2026-10-30 decision above. |
+| PEN capability packages and separate NeuroLink protocol | Importable packages deliver external capabilities; NeuroLink handles external conversations/events and loads channel packages ported from Octos. Minecraft starts with independent multiplayer; client control remains a second design route. See the locked 2026-10-30 decision above. |
 | Native delegation; optional Python orchestration later | Recipe-selected Rig wrapper provides single tasks, bounded parallel batches and chains. Python/apixis remains a later composition direction. See the dated subagent delivery record. |
 | Validate the Python workbench before starting durable | Coding has passed real-task acceptance. Close the new workbench's design and system validation first; then establish durable and verify its workbench integration. |
 

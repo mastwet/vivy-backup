@@ -15,8 +15,18 @@ Minecraft is the first selected game. Independent-player multiplayer is the
 primary route; computer-controlled client play must remain possible in the
 design but is not a second first-delivery gate. Edition/version, Mineflayer or
 another connector, auxiliary-mod policy, manifest/runners, hub distribution and
-the exact A2A/ACP/AG-UI relationship are not finalized. Prefer existing adapters;
-ZeroClaw and Mineflayer are candidates, not verified Vivy integrations.
+the exact A2A/ACP/AG-UI relationship are not finalized. Mineflayer remains a game
+connector candidate, not a verified Vivy integration.
+
+Final channel ruling, 2026-10-30: port/adapt channel packages from
+[Octos](https://github.com/octos-org/octos) and load them through NeuroLink.
+Octos replaces the earlier ZeroClaw candidate. The inspected channel boundary is
+`crates/octos-bus` at `7486f3df54b5803ec4095c60b244617c9d254750`; that crate
+also contains session/cron facilities beyond the selected port. Read DESIGN's
+**Channel packages: port Octos and load through NeuroLink** for the source links
+and scope. This selects channel reuse, not Octos's agent runtime or OUP. Package
+extraction/loading details and the first platform subset remain open; no port,
+build or runtime acceptance is delivered.
 
 This is a documentation-only decision checkpoint: no PEN/NeuroLink/Minecraft
 runtime is delivered. Recipe-selected compilation, existing setup/trust rules,

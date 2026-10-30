@@ -10,8 +10,9 @@ dispositions; the rows below are updated, and the reference findings are in §8.
 
 Owner update, 2026-10-30: DESIGN's locked
 [PEN and NeuroLink decision](../DESIGN.md#pen-and-neurolink-decision-owner-2026-10-30)
-now governs capability packages, external conversation/event interoperability
-and Minecraft as the first game. Relevant scope rows below reflect that update;
+now governs capability packages, external conversation/event interoperability,
+Octos as the channel-package donor loaded through NeuroLink, and Minecraft as
+the first game. Relevant scope rows below reflect that update;
 other target statuses remain the dated inventory, not a fresh implementation
 audit. Consult HANDOFF for subsequent workbench delivery evidence.
 
@@ -186,11 +187,12 @@ does not establish a selected server in either Go main/stable or vivy-test.
 | Native desktop/Wails product | G5 #31; Go feature records | Decide | No | Original product/release work is separate; no assumed reuse of its app shell. |
 | TUI interactive coding and task progress | G1 `sdk/tui`; N1 | Keep | Yes | Current compact Rig TUI exists; detailed old UI/theme/keybinding parity is partial. |
 | Print/JSON/headless modes | G1 face; N1 | Keep | Yes | Existing Rig JSON events are not full legacy wire compatibility. |
+| Channel packages ported from Octos and loaded through NeuroLink | Owner final ruling, 2026-10-30; pinned Octos `7486f3df` | Keep | No | Donor and loading entry are selected. Exact port boundary, loading contract and first platform subset remain open; Octos runtime/OUP adoption is not selected. |
 | QQ channel as an initial external channel | G1 `plugins/qq`, channel host | Decide | No | Earlier first-phase candidate; NeuroLink now has broader conversation/event scope. The exact QQ surface and delivery selection remain open. |
 | Telegram, DingTalk, Feishu, Discord channels | G1 `plugins/*`, channel host | Exclude | No | Outside the earlier first-phase delivery scope; the broader NeuroLink positioning does not itself select these platform implementations. |
 | Channel image input/output and media handling | G1 COMPLETE CH-MEDIA | Decide | No | Old image/media plumbing does not establish voice/video support. |
 | Channel approvals, notifications and interactive cards | G1 channel/HITL notes | Decide | No | Text notifications and platform-native approval cards have different availability. |
-| NeuroLink external conversation and event protocol/standard | Owner, 2026-10-30 | Keep | No | Separate from PEN capability packaging; A2A-like positioning is locked, while wire format and A2A/ACP/AG-UI interoperability remain open. Actual lifecycles belong to Vivy or the PEN module. |
+| NeuroLink external conversation and event protocol/standard | Owner, 2026-10-30 | Keep | No | Separate from PEN capability packaging; also the loading entry for adapted Octos channel packages. Wire format and A2A/ACP/AG-UI interoperability remain open. Actual lifecycles belong to the responsible host/module. |
 | WeCom, Weixin and public webhooks | G1 DEFER/COMPLETE; G5 #2/#13 | Decide | No | Historical proposals/deferrals, not established current product capabilities. |
 | Voice, video, embodied device and robotics integration | G1 media limits; prior owner direction | Decide | No | NeuroLink's intended range includes external embodiments; specific device and live-media implementations remain unselected. |
 | Image generation/editing | G5 #3 | Decide | No | Old owner assigned image generation to external PENS; consumption by new Vivy is not selected here. |
@@ -360,8 +362,8 @@ to reading the inventory and do not silently change the agreed scope:
 
 1. NeuroLink's wire format and relationship to A2A/ACP/AG-UI; inbound/outbound
    support and which harnesses accept external work. SSH is a separate choice.
-2. Specific companion/channel/embodiment implementations within NeuroLink's
-   broader intended scope; its positioning does not select a platform rollout.
+2. Octos channel extraction/loading details and the first platform subset;
+   companion/embodiment implementations remain separate delivery choices.
 3. Human task approvals, status/recovery visibility, history/search and explicit
    file delivery: which behavior is needed in the first usable product.
 4. Memory management granularity: editable Recap, long-term delete/forget and
