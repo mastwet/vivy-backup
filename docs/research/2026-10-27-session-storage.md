@@ -21,6 +21,117 @@ Rig logs only as a conditional fallback after D0. The baseline's commit/recovery
 contract and explicitly unproven integration seams take precedence over older
 implementation suggestions below; this research is not runtime validation.
 
+## D0 execution evidence and bounded proposals (2026-10-31)
+
+The [D0 plan](../plans/2026-10-31-d0-rig-probes.md) is implemented against
+`fc556f982d501eea9d7167398a19386e4884e776`, with Rust 1.97.1 and Bevy 0.20.0.
+This section records executed synthetic tests separately from source inspection.
+**Investigation delivery is complete; the persistence acceptance gate is blocked.**
+The owner selected reproductions and proposals when a contract fails, not an
+automatic fork, private Store or upstream patch implementation. D1 has not begun.
+
+`plugins/vivy-durable` exports only an explicitly compiled `d0-probe` plugin.
+It observes the existing Store and holds native Rig effects until an exact saved
+checkpoint appears in a successful ordinary append. It neither replaces storage
+nor supplies a production task state machine. Ordinary recipes do not compile it.
+The bounded trace records identities, generations, revisions and request/result
+digests, not raw requests or credentials. Every event says `durable: false`.
+
+| Contract / experiment | Evidence and result at this pin |
+| --- | --- |
+| Hold before dispatch across repeated passes | Rust probe: 20 AgentPass runs do not start a tool before its checkpoint is appended. The next frame releases it; a quiet loop needs an explicit wake/release after Last. Supported for ordinary writes. |
+| Exact acknowledgement | Other-agent and stale-revision writes do not release a call. Changed arguments or generation require another saved revision. Injected append failure leaves the call held. Supported for the diagnostic gate. |
+| State and conversation in one write | Probe observes both records in one agent-log append. This is not proof of atomic recovery of a partly written append or a transaction across logs. |
+| Real assembled coding path | Loopback gateway, one file read and two model requests: four gated starts (including input), exact observed checkpoints, no disk receipts. Trace size varies with frames. The checker rejects stale releases and duplicate dispatch. |
+| Final result boundary | Review digest differs from Settled digest after kernel secret redaction. The trace observes settlement without a result commit gate. Capturing Review is insufficient; observing Settled is too late to prevent continuation. Gap. |
+| Saved component failure | An injected serialization error omits a component while conversation records still write and SessionLog reports no write failure. Gap for required state. |
+| Restore policy and tools | Actual mock-model/Rig execution: settled tool result retained, uncertain tool not repeated; zero successor requests with default stop, one with explicit CarryOn. Stop plus a late outcome starts no successor model request. Supported within these cases. |
+| Unsupported Rig format | Both launcher and generated executable refuse `rig-session/999`, send no request and leave logical logs/files byte-identical. Supported; not a Vivy durable-format guard. |
+| Missing or malformed required state | Rust restore and assembled entry tests accept an unknown probe component or invalid value; the baseline launcher also resumes/forks such a session. The warning says subsequent saves replace it. Fail-closed required state is absent. |
+| Writer ownership | Two DirStores reject stale lengths but allow sequential writes by both owners. A second real launcher is refused before a model request. Direct species execution with an explicit shared RIG_SESSION nevertheless reaches the gateway while the first launcher owns the session. The launcher lease is useful; every supported entry must honor it. |
+| Disk sync | Source inspection: DirStore append uses write_all without sync, and no opt-in durable receipt was exercised. Replace uses a synced replacement. No power-loss guarantee is inferred from successful appends or process exits. |
+
+Reproduce on Windows from this checkout (the isolated target path is illustrative):
+
+```powershell
+$env:CARGO_TARGET_DIR='C:/vtd0'
+$env:CARGO_PROFILE_DEV_DEBUG='0'
+$env:PYTHONUTF8='1'
+cargo build --locked
+C:/vtd0/debug/vivy.exe build recipes/coding-agent.yaml
+python -m unittest discover -s scripts -p test_durable_probe.py
+python scripts/durable_probe.py C:/vtd0/debug/vivy.exe
+```
+
+The probe script runs 11 offline Rust characterizations, derives and builds a
+temporary recipe, checks the baseline dependency graph, and writes
+`.workspace/d0/report.json`, `coding-trace.json`, `coding.stderr` and
+`rust-probes.log`. **Exit 2 means the known persistence gaps were reproduced**;
+an unexpected assertion/build/process failure is an error, not a passed D0 gate.
+Reports begin as `running` so an aborted invocation cannot reuse an old conclusion.
+The four Python checker tests are also offline. Logs, synthetic homes and traces
+are not committed. Cargo may fetch pinned dependencies; no external model is used.
+
+### Proposed changes and ownership
+
+These are bounded proposals, not APIs that exist or patches already submitted.
+Keep the ordinary coding defaults intact and negotiate the generic seams with Rig.
+
+1. **Opt-in committed saved bundle and receipt (Rig ECS + memory).** Add a
+   fallible checkpoint operation that serializes the required component set and
+   associated conversation changes before any of that bundle is released. Bind
+   the acknowledgement to store/session, agent, operation, request digest,
+   generation and revision; an unrelated flush or has_written is insufficient.
+   An opt-in Store commit must report successful sync, propagate append/sync
+   errors, and make a partly persisted bundle uncommitted on recovery. Preserve
+   existing fast appends for ordinary sessions. First acceptance: fault injection
+   at serialization, append and sync never grants dispatch; a complete synced
+   bundle is granted once; cross-log atomicity is not silently promised.
+2. **Final redacted outcome gate (Rig ECS).** Expose an ordered phase after the
+   kernel's final redaction and before Settled/transcript publication or successor
+   dispatch. A result held there must remain frozen or invalidate its receipt
+   when changed. Reuse public holds/decisions and the existing loop. Include a
+   supported way to reinsert a saved model result and stable tool call IDs on
+   restoration, without another provider/tool invocation. Test redaction, late
+   cancellation, interrupted streams and saved-result-before-transcript recovery.
+   The existing Interrupted::Settled tool path is reuse evidence, not proof of
+   completed model-result reinjection.
+3. **Required saved keys (Rig harness/ECS).** Let a build declare required saved
+   components/versioned schema for a marked session. Missing plugin, decode
+   failure and required serialization failure must refuse or suspend before
+   dispatch and leave the authoritative state unchanged. Keep optional plugin
+   compatibility for ordinary sessions. Test the launcher, generated executable,
+   fork and rewrite paths; a type name or stable key alone is not a requirement.
+4. **Host ownership and durable format/lineage guard (Vivy, with Rig protocol
+   reuse).** Reuse SessionDir::hold; cover direct execution and resume before
+   opening writable state, with an explicit launcher-to-child ownership handoff
+   rather than taking the same lock twice. A durable marker must reject builds
+   lacking its capabilities. Fork/rewind need fresh execution lineage and no
+   copied live obligations. The existing baseline CLI fork copies unknown probe
+   state; no production durable lineage or rewind guarantee is claimed here.
+
+Precise source starting points at the audited commit:
+[`dir.rs`](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/crates/rig-memory/src/dir.rs)
+(`append_log` / `replace_log`),
+[`session_log.rs`](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/crates/rig-ecs/src/session_log.rs)
+(`SaveSystems`, private flush and serialization),
+[`stage.rs`](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/crates/rig-ecs/src/stage.rs)
+(`redact_results` in private Enter(Commit), public holds), and
+[`restore.rs`](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/crates/rig-ecs/src/restore.rs)
+(skipped saved values, CarryOn and Interrupted). The Review documentation at
+this pin describes redaction earlier than the registered schedule; the executed
+redaction probe is the relevant evidence. Vivy's lease entry is
+`crates/vivy/src/launch.rs::run_sessions`; its raw-copy fork also needs the future
+durable guard. No source/reference checkout was modified and no issue/PR posted.
+
+Unverified: power loss, sync-failure recovery (no receipt API yet), the full D1
+crash matrix, production cancellation generations, durable fork/rewind lineage,
+completed saved model-result reinjection and real-provider acceptance. The probes
+only mutate a generation in diagnostic state; they do not deliver production
+cancellation persistence. Do not substitute these tests for those contracts.
+Re-run D0 at the eventual upstream patch revision before authorizing D1. A private
+Store remains conditional; these findings do not select it automatically.
+
 ## Current upstream adoption assessment (2026-10-31)
 
 The owner asks whether using Rig directly and contributing generic fixes can

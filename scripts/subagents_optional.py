@@ -18,13 +18,13 @@ from mock_gateway import Handler
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
-def variant(builder, name, excluded):
+def variant(builder, name, excluded, extra=""):
     original = (ROOT / "recipes/coding-agent.yaml").read_text(encoding="utf-8")
     header, components = original.split("components:\n", 1)
     header = re.sub(r"(?m)^name: coding-agent$", "name: " + name, header)
     pieces = re.split(r"(?=^  - name:)", components, flags=re.MULTILINE)
     selected = [piece for piece in pieces if not any(piece.startswith("  - name: " + item + "\n") for item in excluded)]
-    text = header + "components:\n" + "".join(selected)
+    text = header + "components:\n" + "".join(selected) + extra
     text = re.sub(r"path: ../plugins/([^\s]+)", lambda m: "path: " + json.dumps(str(ROOT / "plugins" / m[1])), text)
     directory = ROOT / ".workspace/subagents/recipes"
     directory.mkdir(parents=True, exist_ok=True)

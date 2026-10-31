@@ -1,5 +1,47 @@
 # Handoff: continue the independent assembly experiment
 
+## D0 implementation and blocked persistence gate (2026-10-31)
+
+The [D0 plan](plans/2026-10-31-d0-rig-probes.md) is implemented. Every active Rig
+dependency/recipe is pinned to `fc556f982d501eea9d7167398a19386e4884e776`;
+Rust 1.97.1 and Bevy 0.20.0 remain unchanged. TUI adapters use LookLine and current
+highlighting APIs. Context/Plan preparation has explicit ordering even when the
+recipe excludes subagents. Ordinary restored workflows stop, without silently
+launching a new model request; unsupported invocation flags now exit 2.
+
+The new `plugins/vivy-durable` crate exposes only feature `d0-probe`, for synthetic
+diagnostics. `scripts/durable_probe.py` derives a temporary recipe and runs Rust
+characterizations plus actual launcher/species checks. It returns **2 for known
+persistence blockers**, with evidence in ignored `.workspace/d0/report.json`.
+It does not implement a DurablePlugin, sync receipts or the D1 state machine.
+The default recipe's dependency graph contains no vivy-durable.
+
+Verification on Windows, MSVC, isolated `C:/vtd0` target (debug symbols disabled):
+
+| Check | Observed result |
+| --- | --- |
+| Root workspace / basics all features / gateway / Python Rust tests | 22 / 82 / 33 / 20 passed |
+| D0 Rust characterizations / Python trace-checker tests | 11 / 4 passed |
+| Baseline coding recipe | Built; final incremental rebuild 5.89 s, not a cold-build comparison |
+| Coding / provider / subagent loopback smoke | Passed; two provider wire families, unchanged model IDs, tools, failures and sessions |
+| Native terminal smoke | Passed at 50x20: Plan UI, markdown, tool failure and cancellation |
+| Python workbench lifecycle | 20 cycles, zero orphans; cold median 1.186 s, warm 0.082 s, maximum close 0.322 s in this fixture |
+| D0 coding and entry paths | Four gated starts; unsupported Rig format refused unchanged; launcher lease enforced; required-state and direct-entry gaps reproduced |
+
+The lifecycle fixture is not a rerun of all native MemPalace integration tests.
+These are synthetic/offline model tests, not real-provider or power-loss evidence.
+The TUI check used an ignored task-local venv for pyte/pywinpty. Reference checkouts
+and user environments were not changed. Full reproduction commands, patch-sized
+proposals and remaining unverified cases are in the
+[D0 evidence record](research/2026-10-27-session-storage.md#d0-execution-evidence-and-bounded-proposals-2026-10-31).
+
+**Next:** discuss/implement the bounded upstream seams and Vivy entry guards in
+that record, then repeat D0 before D1. The owner selected proposals on reproduced
+gaps for this delivery; no private Store, upstream patch, issue/PR publication,
+push or deferred real-provider retry was performed. Older entries below describe
+their own dated checkpoints; their "next plan" and "pin unchanged" statements do
+not supersede this implementation record.
+
 ## Consolidated architecture baseline and review (2026-10-31)
 
 Read the [consolidated baseline](DESIGN.md#consolidated-architecture-baseline-2026-10-31),

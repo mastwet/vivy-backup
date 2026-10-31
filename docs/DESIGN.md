@@ -1,5 +1,25 @@
 # Decisions and assembly direction
 
+## D0 implementation checkpoint (2026-10-31)
+
+The [D0 plan](plans/2026-10-31-d0-rig-probes.md) upgrades the active Rig pin to
+`fc556f982d501eea9d7167398a19386e4884e776` and supplies experimental persistence
+probes through the existing coding face. Ordinary coding retains Rig's default
+stop-on-restore policy; no global CarryOn or second execution loop is introduced.
+The normal recipe does not compile the probe plugin.
+
+**D0 investigation is delivered; the persistence gate remains blocked.**
+Successful ordinary-write gating is not durable commit acknowledgement. Final
+redacted-result gating, synced bundle receipts, fail-closed required state and
+coverage of every writer entry remain missing. The real launcher already rejects
+a second owner, but a directly executed species can bypass that ownership.
+See [executed evidence and bounded proposals](research/2026-10-27-session-storage.md#d0-execution-evidence-and-bounded-proposals-2026-10-31).
+The owner selected reproduction/proposal delivery at these gaps, without an
+automatic private Store, Rig fork or upstream patch implementation. D1 stays
+blocked pending the missing seams and a repeated acceptance run. Real-provider
+acceptance remains deferred. The architecture below remains the target contract,
+not a claim that those durability guarantees now exist.
+
 ## Consolidated architecture baseline (2026-10-31)
 
 **Status: preliminary detailed architecture locked after synthesis and review.
