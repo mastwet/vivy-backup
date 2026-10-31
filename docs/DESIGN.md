@@ -871,11 +871,27 @@ by the later-phase inbox decision above.
 
 **Priority update (owner, 2026-10-31).** A digital resident in the game may become
 one of this phase's key deliveries. Research now informs the task/scheduling
-design rather than treating embodiment solely as a distant adapter. The exact
-resident behavior and delivery commitment are not yet selected. The
+design rather than treating embodiment solely as a distant adapter. The role
+and owner-departure behavior are selected below; exact acceptance scope and
+delivery commitment remain open. The
 [research comparison](research/2026-10-25-hybrid-agent-workbench-decisions.md#24-digital-resident-research-and-idle-autonomy-default-2026-10-31)
 recommends evaluating an existing Minecraft MCP action runtime first; this is
 not a locked implementation choice or a successful gameplay test.
+
+**Companion behavior (owner, 2026-10-31).** The first resident is a companion
+who adventures with the owner and also lives in that world. When the owner
+logs out while the server remains online, the agent decides whether to stay.
+Owner departure is an observed event for the existing decision path, not an
+automatic disconnect or an instruction to remain online indefinitely. Continuing
+admitted activities, settling at home or leaving are possible choices; do not
+hard-code one as the consequence of owner logout.
+
+This discretion operates within an explicitly enabled game activity and its
+existing permissions/budgets. Generic idle autonomy still defaults off. An
+explicit owner stop/pause takes precedence. The host remains responsible for
+connection and task lifecycle; an online game server alone cannot keep a stopped
+Vivy host acting. Exact event, departure and later-return mechanics remain design
+work, with no runtime behavior delivered by this decision.
 
 Minecraft is selected as the first PEN game integration. The owner prioritizes
 Vivy joining multiplayer as an independent player. Controlling a Minecraft

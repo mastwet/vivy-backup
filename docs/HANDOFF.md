@@ -6,7 +6,12 @@ The owner selects idle autonomous activity off by default, enabled on demand,
 and identifies a game-world digital resident as a possible key delivery this
 phase. Read the [resident research](research/2026-10-25-hybrid-agent-workbench-decisions.md#24-digital-resident-research-and-idle-autonomy-default-2026-10-31)
 before settling scheduling behavior. Independent Minecraft multiplayer remains
-the first game route; resident scope, edition/version and backend remain open.
+the first game route; exact acceptance scope, edition/version and backend remain
+open. The owner selects a companion who adventures with them and also inhabits
+the world. If the owner logs out while the server remains online, the agent
+decides whether to stay within the enabled game activity. This does not enable
+global idle autonomy or override explicit stop/pause; the Vivy host must remain
+available for continued activity. See DESIGN's companion-behavior clarification.
 The research recommends evaluating `aibengineering/mine-ai-mcp` as an existing
 action/reflex runtime behind the PEN, retaining Vivy as the only assistant
 decision/persona/memory owner. Mindcraft and the cited papers provide additional

@@ -2394,12 +2394,17 @@ authentication, cancellation and long-call behavior remain untested.
    latency, perception and control requirements make it a separate acceptance
    case rather than an additional gate for independent multiplayer.
 
-Proposed first case: one independent resident with a home and a bounded daily
-activity (for example gathering and storing supplies), identifiable encounters
-with the owner, a game-time routine, interruption, reconnect and retained
-experience. Choose home-based life versus a travelling companion with the owner
-before freezing the task. A one-day scenario plus a longer unattended soak can
-measure progress, repeated loops, deaths/stalls, handoff latency and model calls
+**Subsequent owner clarification:** the resident adventures with the owner and
+also lives in the world. After owner logout, with the server still online, the
+agent decides whether to stay; this is within the enabled game activity, while
+generic idle autonomy stays off and explicit stop/pause still takes precedence.
+The detailed departure/return mechanism and gameplay acceptance remain open.
+
+Proposed first case: one independent companion with a home, shared adventure
+and bounded activities (for example gathering and storing supplies), retained
+interaction with the owner, a game-time routine, interruption and reconnect.
+Include owner departure as a decision event. A one-day scenario plus a longer
+unattended soak can measure progress, repeated loops, deaths/stalls, handoff latency and model calls
 per hour. No throughput, reliability, cost or delivery-date guarantee is inferred.
 General swarm society, a civilization simulator, full visual gameplay and new
 persona/memory engines are not implied requirements. General inbox/hooks remain
