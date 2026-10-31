@@ -214,7 +214,10 @@ impl PublicationStore {
         let record: Value = serde_json::from_slice(
             &self
                 .local()
-                .read_file(&format!("{}.json", publication.id))?,
+                .read_file(&format!("{}.json", publication.id))
+                .map_err(|e| io::Error::new(io::ErrorKind::PermissionDenied, format!(
+                    "Workbench publication {} has no local validation record after its installation scope changed: {e}", publication.id
+                )))?,
         )
         .map_err(io::Error::other)?;
         if record["publication"] != publication.id || record["scope"] != publication.scope() {

@@ -147,6 +147,9 @@ pub(super) fn report(world: &World, _: Entity) -> Report {
     if !init.checked {
         report.phase = Some("checking".into());
     }
+    if init.pending_save {
+        report.phase = Some("publishing".into());
+    }
     if let Some(job) = world.resource::<Preparations>().0.values().next() {
         report.phase = Some(job.stage.lock().unwrap_or_else(|e| e.into_inner()).clone());
     }
@@ -155,6 +158,9 @@ pub(super) fn report(world: &World, _: Entity) -> Report {
 fn memory_report(world: &World, agent: Entity) -> Report {
     if !world.resource::<PythonSettings>().memory {
         return Report {
+            // Memory shares Python's preparer and grant. Do not offer the next
+            // setup step until the running preparation and local receipt finish.
+            phase: report(world, agent).phase,
             detail:
                 "Disabled. Enable to install native MemPalace and download its embedding model."
                     .into(),
@@ -400,6 +406,13 @@ fn open(world: &mut World, agent: Entity, memory: bool) {
     } else {
         report(world, agent)
     };
+    if current.phase.is_some() {
+        world.write_message(Notice::info(
+            agent,
+            "Python initialization is still running. Wait for it to finish, then reopen /setup.",
+        ));
+        return;
+    }
     let picker = Picker::new(if memory { "Initialize MemPalace" } else { "Initialize Python" }).for_agent(agent)
         .body(format!("{}\nInstall locked dependencies and trusted Python Skills. If missing, download verified uv 0.11.7 and Python 3.13.12 into the application toolchain directory. No system PATH or registry changes.{}\nApproval permits future repair of this same scope only.", current.detail, if native { " MemPalace is included: download embeddinggemma and validate a disposable local palace." } else { " Memory remains optional." }))
         .item("Approve and prepare", "")
@@ -414,6 +427,13 @@ fn open(world: &mut World, agent: Entity, memory: bool) {
                 let result = (|| -> Result<(), String> {
                     let mut decision = setup::decision(world, key)?;
                     if matches!(choice, Some(0 | 1)) {
+                        // A picker can predate another preparation. Recheck at
+                        // admission, before changing either settings or grants.
+                        if !world.resource::<Preparations>().0.is_empty()
+                            || world.resource::<Initialization>().pending_save
+                        {
+                            return Err("Python initialization is still running. Wait for it to finish, then reopen /setup; the existing grant is unchanged.".into());
+                        }
                         #[cfg(feature = "managed-skills")]
                         retain_before_approval(world)?;
                         if memory {
@@ -474,6 +494,108 @@ fn open(world: &mut World, agent: Entity, memory: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn memory_setup_waits_for_python_preparation_and_its_local_receipt() {
+        let mut app = App::new();
+        app.init_resource::<PythonSettings>()
+            .init_resource::<Initialization>()
+            .init_resource::<Preparations>();
+        let agent = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<Initialization>().checked = true;
+        app.world_mut().resource_mut::<Initialization>().scope = "core".into();
+        let (_sender, receiver) = mpsc::channel();
+        app.world_mut().resource_mut::<Preparations>().0.insert(
+            agent,
+            Preparation {
+                cancel: Arc::default(),
+                result: Mutex::new(receiver),
+                stage: Arc::new(Mutex::new("dependencies".into())),
+                checking: false,
+                last_stage: String::new(),
+            },
+        );
+        assert_eq!(
+            memory_report(app.world(), agent).phase.as_deref(),
+            Some("dependencies")
+        );
+        app.world_mut().resource_mut::<Preparations>().0.clear();
+        app.world_mut().resource_mut::<Initialization>().complete(
+            false,
+            Ok("prepared".into()),
+            false,
+        );
+        assert!(
+            memory_report(app.world(), agent).phase.is_some(),
+            "the local validation receipt is not saved yet"
+        );
+        app.world_mut()
+            .resource_mut::<Initialization>()
+            .pending_save = false;
+        assert!(memory_report(app.world(), agent).phase.is_none());
+    }
+
+    #[test]
+    fn an_already_open_memory_picker_cannot_replace_an_inflight_python_grant() {
+        use rig_harness::pick::Chosen;
+        let root = std::env::temp_dir().join(format!("vivy-setup-race-{}", std::process::id()));
+        let home = root.join("home");
+        std::fs::create_dir_all(&root).unwrap();
+        let mut app = App::new();
+        app.insert_resource(ProjectRoot(root.clone()))
+            .insert_resource(RigHome(rig_harness::harness_protocol::Home::at(&home)))
+            .init_resource::<PythonSettings>()
+            .init_resource::<Initialization>()
+            .init_resource::<Preparations>()
+            .add_message::<Notice>();
+        let agent = app.world_mut().spawn_empty().id();
+        app.world_mut().resource_mut::<Initialization>().checked = true;
+        app.world_mut().resource_mut::<Initialization>().scope = "core".into();
+        setup::save(
+            &home,
+            &root,
+            "python",
+            &setup::Decision {
+                grant: Some("core".into()),
+                scope: "core".into(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        open_memory(app.world_mut(), agent);
+        let picker = app
+            .world_mut()
+            .query_filtered::<Entity, With<Picker>>()
+            .single(app.world())
+            .unwrap();
+        let (_sender, receiver) = mpsc::channel();
+        app.world_mut().resource_mut::<Preparations>().0.insert(
+            agent,
+            Preparation {
+                cancel: Arc::default(),
+                result: Mutex::new(receiver),
+                stage: Arc::new(Mutex::new("dependencies".into())),
+                checking: false,
+                last_stage: String::new(),
+            },
+        );
+        app.world_mut().trigger(Picked {
+            entity: picker,
+            chosen: Some(Chosen::item(0)),
+        });
+        app.world_mut().flush();
+        let grant = setup::read(&home, &root, "python").unwrap();
+        let memory = setup::read(&home, &root, "memory").unwrap();
+        let enabled = app.world().resource::<PythonSettings>().memory;
+        std::fs::remove_dir_all(&root).unwrap();
+        assert!(
+            !enabled,
+            "a late picker changed the running preparation's scope"
+        );
+        assert_eq!(grant.grant.as_deref(), Some("core"));
+        assert!(!memory.enabled);
+    }
+
     #[test]
     fn alternate_package_sources_change_the_authorized_scope() {
         let a = source_identity([("UV_EXTRA_INDEX_URL", "https://one.invalid/simple")]);

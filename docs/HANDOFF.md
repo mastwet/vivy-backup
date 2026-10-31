@@ -101,6 +101,36 @@ setup was pending took 0.501 seconds. An incremental diagnostic build took 24.28
 seconds; the ordinary build took 23.25 seconds. These are local synthetic
 observations, not general performance claims.
 
+### D4 first-run setup correction (2026-11-01)
+
+A manual terminal trial exposed a setup race not covered by the original D4
+matrix. While the first Python preparation was running, the disabled-memory
+report hid that phase and allowed the startup flow to approve MemPalace. This
+replaced the Python grant before the original environment and local validation
+receipt finished publishing. Subsequent foreground requests could not select
+that environment; the missing retained validation record surfaced as Windows
+"path not found", even though the Python executable existed.
+
+Memory setup now reports the shared preparation/publishing phase. Opening or
+accepting a setup picker while preparation or receipt persistence is pending
+leaves settings/grants unchanged. Missing publication validation errors now name
+the local validation problem. Two offline regressions and the old executable
+reproduced the failure. The fixed executable passes native first-run preparation,
+foreground response and same-session reopen through
+`scripts/persistent_setup_smoke.py <persistent-agent.exe>` (test-only terminal
+dependencies as below). Rust suites pass 36 managed-workbench, 22 ordinary-workbench
+and 52 durable tests. Formatting, Python compilation and whitespace checks pass.
+
+The affected local trial was recovered after matching the manifest digest to its
+existing local environment receipt and rechecking the interpreter, package
+versions and imports. Its retained validation record was restored with backups;
+grants and prior session logs were preserved. A resumed real StepFun foreground
+probe received the expected `STARTUP_VERIFIED` response, then was stopped. The
+inherited-proxy attempt failed to send; a direct attempt succeeded. The ignored
+trial launcher bypasses the proxy for this endpoint only. This is narrow real
+response evidence, not complete real-provider tool/evolution acceptance. The
+interactive trial was reopened with the repaired binary and original session.
+
 ## D3 persistent waits and wakes (2026-11-01)
 
 Branch `feat/d3-durable-wake`, based on D2 `c0bad0d`, in
