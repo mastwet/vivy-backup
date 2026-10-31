@@ -161,6 +161,8 @@ struct Selected {
     task: String,
     sources: Vec<String>,
 }
+#[derive(Component)]
+struct FrozenProjection;
 
 #[derive(Default)]
 pub struct AssistantContextPlugin;
@@ -217,7 +219,17 @@ fn task_messages(
     let mut messages = vec![Arc::new(input_message(&record.input))];
     let mut sources = vec![format!("{task}/input")];
     let mut calls = BTreeMap::new();
+    #[cfg(feature = "wake")]
+    let mut notices = super::wake::notices(state, task).into_iter().peekable();
     for op in state.operations.iter().filter(|o| o.task == task) {
+        #[cfg(feature = "wake")]
+        if op.kind == "model" {
+            while notices.peek().is_some_and(|n| n.0 <= op.step) {
+                let (_, id, input) = notices.next().unwrap();
+                messages.push(Arc::new(input_message(&input)));
+                sources.push(id);
+            }
+        }
         let Some(value) = &op.outcome else { continue };
         let Some(outcome) = FinalOutcome::from_value(value.clone())?
             .effect_result()
@@ -242,6 +254,11 @@ fn task_messages(
             sources.push(op.id.clone());
         }
     }
+    #[cfg(feature = "wake")]
+    for (_, id, input) in notices {
+        messages.push(Arc::new(input_message(&input)));
+        sources.push(id);
+    }
     pairing::validate(&messages).map_err(io::Error::other)?;
     Ok((messages, sources))
 }
@@ -251,7 +268,6 @@ fn project(world: &mut World) {
         .query_filtered::<(Entity, &ForAgent, &ModelRequest), (
             With<Admitted>,
             With<TurnCall>,
-            Without<Restored>,
             Without<Selected>,
             Without<Started>,
             Without<Outcome>,
@@ -264,6 +280,13 @@ fn project(world: &mut World) {
         let Some(state) = committed(world, agent) else {
             continue;
         };
+        #[cfg(feature = "wake")]
+        if world
+            .get::<DurableAgentState>(agent)
+            .is_some_and(|local| local.wakes != state.wakes)
+        {
+            continue;
+        }
         let Some(task) = state.active.clone() else {
             continue;
         };
@@ -276,6 +299,25 @@ fn project(world: &mut World) {
         let recap = storage::committed_context(world, agent)
             .cloned()
             .unwrap_or_default();
+        // A persisted native call may precede its durable context/intent receipt.
+        // Such a call was never allowed to dispatch and must be projected on reopen.
+        // Calls with a saved reference instead replay their exact frozen request.
+        if world.get::<Restored>(call).is_some()
+            && world.get::<Bound>(call).is_some_and(|b| {
+                state
+                    .operations
+                    .iter()
+                    .find(|o| o.id == b.operation)
+                    .is_some_and(|o| {
+                        recap
+                            .requests
+                            .values()
+                            .any(|r| r.task == o.task && r.request_digest == o.digest)
+                    })
+            })
+        {
+            continue;
+        }
         let retry = world
             .get::<CallOf>(call)
             .and_then(|of| world.get::<rig_harness::rig_ecs::turn::Recovery>(of.0))
@@ -286,12 +328,18 @@ fn project(world: &mut World) {
                 .iter()
                 .rev()
                 .find(|o| o.task == task && o.kind == "model")
+                .filter(|o| {
+                    recap
+                        .requests
+                        .values()
+                        .any(|r| r.task == o.task && r.request_digest == o.digest)
+                })
             {
                 if let Ok(frozen) = serde_json::from_value(operation.request.clone()) {
                     request.request = Arc::new(frozen);
                     request.prompt = None;
                     request.history = None;
-                    world.entity_mut(call).insert(request);
+                    world.entity_mut(call).insert((request, FrozenProjection));
                     continue;
                 }
             }
@@ -303,6 +351,14 @@ fn project(world: &mut World) {
                     .iter()
                     .filter(|t| t.id != task && t.delivered && t.status == Status::Queued)
                 {
+                    #[cfg(feature = "wake")]
+                    if state
+                        .wakes
+                        .iter()
+                        .any(|w| w.task == queued.id && w.phase == super::wake::Phase::Fired)
+                    {
+                        continue;
+                    }
                     messages.push(Arc::new(input_message(&queued.input)));
                     sources.push(format!("{}/input", queued.id));
                 }
@@ -384,6 +440,21 @@ pub(super) fn is_maintenance(world: &World, call: Entity) -> bool {
     world
         .get::<Effect>(call)
         .is_some_and(|e| e.purpose.as_deref() == Some("vivy.recap"))
+}
+
+pub(super) fn projection_ready(world: &World, agent: Entity, call: Entity) -> bool {
+    world.get::<AssistantContextState>(agent).is_none()
+        || world.get::<Selected>(call).is_some()
+        || world.get::<FrozenProjection>(call).is_some()
+        || world.get::<Bound>(call).is_some_and(|b| {
+            storage::committed_context(world, agent).is_some_and(|s| {
+                s.requests.keys().any(|id| {
+                    id == &b.operation
+                        || id.rsplit_once('/').map(|p| p.0)
+                            == b.operation.rsplit_once('/').map(|p| p.0)
+                })
+            })
+        })
 }
 
 pub(super) fn intent_ready(

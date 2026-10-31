@@ -67,11 +67,12 @@ Windows cannot replace a running executable.
 
 ## Experimental persistent assistant
 
-`recipes/persistent-agent.yaml` selects D2 persona and asynchronous Recap-only
-context on the local Rig checkpoint fork. It is separate from the coding recipe
-and needs new sessions. Background summary work yields to new foreground input;
-optional native memory is accessed only through explicit tools. Build/run steps,
-commands and verification limits are in the [D2 handoff](docs/HANDOFF.md#d2-persona-recap-and-explicit-memory-2026-11-01).
+`recipes/persistent-agent.yaml` selects D3 persistent waits and timed wakes, with
+persona and asynchronous Recap-only context on the local Rig checkpoint fork.
+Use new D3 sessions; preserve earlier executables and sessions. A live terminal
+or JSON host delivers deadlines; print mode saves the wait and exits. Background
+summary work yields to foreground input; native memory uses explicit tools only.
+Build/run steps, commands and limits are in the [D3 handoff](docs/HANDOFF.md#d3-persistent-waits-and-wakes-2026-11-01).
 
 ## Providers and runtime settings
 

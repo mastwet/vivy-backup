@@ -15,6 +15,7 @@ rig-fork-probe = ["d0-probe"]
 checkpoint-probe = []
 runtime = ["dep:vivy-gateway", "dep:schemars"]
 assistant-context = ["runtime", "dep:vivy-laputa"]
+wake = ["assistant-context"]
 
 [dependencies]
 rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }

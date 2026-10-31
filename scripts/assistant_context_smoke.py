@@ -127,6 +127,7 @@ def turn(agent, text):
 
 def build(builder, rig, env, name, no_python=False):
     source = (ROOT/'recipes/persistent-agent.yaml').read_text(encoding='utf-8')
+    source = source.replace('vivy-durable: [wake]', 'vivy-durable: [assistant-context]')
     source = source.replace('name: persistent-agent', f'name: {name}').replace('vivy-durable: [assistant-context]', 'vivy-durable: [assistant-context, checkpoint-probe]')
     if no_python:
         source = re.sub(r'  - name: python\n.*?(?=  - name: persona)', '', source, flags=re.S)

@@ -15,11 +15,16 @@ use std::{collections::BTreeMap, io};
 pub mod assistant;
 mod state;
 mod storage;
+#[cfg(feature = "wake")]
+pub mod wake;
 use state::workspace;
 pub use state::{Admission, Control, DurableAgentState, Operation, PendingControl, Status, Task};
 use storage::{committed, healthy};
 
+#[cfg(not(feature = "wake"))]
 const KEY: &str = "vivy.durable.v1";
+#[cfg(feature = "wake")]
+const KEY: &str = "vivy.durable.v2";
 
 #[derive(Default)]
 pub struct DurablePlugin;
@@ -59,6 +64,7 @@ fn inspection_tool(name: &str) -> bool {
         "resolve_operation",
         "memory_get",
         "memory_search",
+        "wake_status",
     ]
     .contains(&name)
 }
@@ -70,7 +76,11 @@ impl Plugin for DurablePlugin {
             .init_resource::<SavedKeys>();
         app.world_mut()
             .resource_mut::<SavedKeys>()
-            .require(std::any::type_name::<DurableAgentState>(), KEY, 1)
+            .require(
+                std::any::type_name::<DurableAgentState>(),
+                KEY,
+                if cfg!(feature = "wake") { 2 } else { 1 },
+            )
             .expect("unique durable schema");
         app.add_observer(|added:On<Add<Agent>>, mut commands:Commands| {
             commands.entity(added.entity).insert(PersistOutcomes).insert_if_new(DurableAgentState::default());
@@ -104,7 +114,7 @@ impl Plugin for DurablePlugin {
                 }
             }
         })
-        .add_open_tool("task_control","Choose continue, switch, defer or finish_silently for an admitted task. Use its exact generation from durable context. This changes task state after this call and its sibling batch are saved.",ToolOptions::default(), control_called)
+        .add_open_tool("task_control",if cfg!(feature="wake") {"Control an admitted task using its exact task generation. Actions: continue, switch, defer, finish_silently, wait (seconds and reason), cancel_wake (wake_id and wake_generation from wake_status). wait closes this turn, keeps the task, and schedules one wake; it replaces the previous schedule. cancel_wake suspends only its target task. Changes apply after this call and sibling results commit."} else {"Choose continue, switch, defer or finish_silently for an admitted task. Use its exact generation from durable context. This changes task state after this call and its sibling batch are saved."},ToolOptions::default(), control_called)
         .add_open_tool("resolve_operation","Resolve an unknown external effect using evidence from non-mutating inspection or an explicit user decision. Never guess success or resend the original operation.",ToolOptions::default(),|event:On<ToolCalled<Resolution>>,mut commands:Commands| {
             let (call,agent,op,generation,evidence)=(event.call,event.agent,event.args.operation.clone(),event.args.generation,event.args.evidence.clone());
             commands.queue(move |world:&mut World| {
@@ -115,6 +125,8 @@ impl Plugin for DurablePlugin {
                 world.entity_mut(call).insert(outcome);
             });
         });
+        #[cfg(feature = "wake")]
+        wake::install(app);
     }
 }
 
@@ -363,7 +375,7 @@ fn continue_pending(world: &mut World) {
             .and_then(|s| {
                 s.tasks
                     .iter()
-                    .find(|t| t.status == Status::Queued && t.delivered)
+                    .find(|t| t.status == Status::Queued && t.delivered && can_continue(s, &t.id))
             })
             .map(|t| t.id.clone());
         let Some(next) = next else {
@@ -379,6 +391,7 @@ fn continue_pending(world: &mut World) {
         let mut state = world.get_mut::<DurableAgentState>(agent).unwrap();
         state.active = Some(next.clone());
         state.task_mut(&next).unwrap().status = Status::Running;
+        state.task_mut(&next).unwrap().outcome = None;
         state.decision_pending = false;
         state.bump();
         drop(state);
@@ -476,13 +489,18 @@ fn admit_inputs(world: &mut World) {
         if world.get::<DurableAgentState>(agent).is_none() {
             continue;
         }
+        #[cfg(feature = "wake")]
+        if wake::admit(world, call, agent, &input) {
+            continue;
+        }
         #[cfg(feature = "assistant-context")]
         if world
             .get::<assistant::AssistantContextState>(agent)
             .is_some()
-            && input
-                .command()
-                .is_some_and(|s| matches!(s.split_whitespace().next(), Some("persona" | "recap")))
+            && input.command().is_some_and(|s| {
+                matches!(s.split_whitespace().next(), Some("persona" | "recap"))
+                    || (cfg!(feature = "wake") && s.split_whitespace().next() == Some("wake"))
+            })
         {
             release(world, call);
             continue;
@@ -768,6 +786,8 @@ fn gate(world: &mut World) {
             .tasks
             .iter()
             .any(|t| !t.delivered && t.status == Status::Queued);
+        #[cfg(feature = "wake")]
+        let pending = pending || wake::pending(&state);
         let changing = state
             .control
             .as_ref()
@@ -793,7 +813,8 @@ fn gate(world: &mut World) {
         let blocked = matches!(
             task.status,
             Status::Suspended | Status::Cancelled | Status::Completed | Status::Failed
-        ) || state.workspace != workspace();
+        ) || is_waiting(&task.status)
+            || state.workspace != workspace();
         let ending = world
             .get::<CallOf>(call)
             .is_some_and(|of| world.get::<TurnOutcome>(of.0).is_some());
@@ -818,6 +839,15 @@ fn gate(world: &mut World) {
         }
         // Persist exactly the identities the worker will receive. Preparation
         // happens for siblings together; the serial gate owns the logical step.
+        #[cfg(feature = "assistant-context")]
+        if model.is_some()
+            && !assistant::projection_ready(world, agent, call)
+            && !world
+                .get::<Decision>(call)
+                .is_some_and(Decision::is_decided)
+        {
+            continue;
+        }
         if let Some(request) = &mut tool {
             if request.call.function.name.as_str() == "memory_remember" {
                 let identity = world
@@ -1053,7 +1083,11 @@ fn capture(world: &mut World) {
                 let task = state.task_mut(&active).unwrap();
                 if task.outcome.as_ref() != Some(&value) {
                     task.outcome = Some(value);
-                    if task.status != Status::Cancelled && task.status != Status::Suspended {
+                    if task.status != Status::Cancelled
+                        && task.status != Status::Suspended
+                        && task.status != Status::Completed
+                        && !is_waiting(&task.status)
+                    {
                         task.status = match turn {
                             TurnOutcome::Answered(_) => Status::Completed,
                             TurnOutcome::Failed(_) => Status::Failed,
@@ -1079,6 +1113,10 @@ fn acknowledge(world: &mut World) {
         .collect();
     for (call, agent, value, bound) in results {
         if bound.is_some() {
+            #[cfg(feature = "wake")]
+            if !wake::accepted(world, agent) {
+                continue;
+            }
             let pending: Vec<_> = world
                 .get::<DurableAgentState>(agent)
                 .into_iter()
@@ -1168,7 +1206,7 @@ fn boundary(world: &mut World) {
                     matches!(
                         t.status,
                         Status::Completed | Status::Failed | Status::Cancelled | Status::Suspended
-                    )
+                    ) || is_waiting(&t.status)
                 })
         {
             state.decision_pending = state
@@ -1257,9 +1295,8 @@ fn control_called(
     let Ok(mut state) = agents.get_mut(event.agent) else {
         return;
     };
-    let valid = ["continue", "switch", "defer", "finish_silently"]
-        .contains(&event.args.action.as_str())
-        && (event.args.action == "switch"
+    let valid = event.args.valid_action()
+        && (matches!(event.args.action.as_str(), "switch" | "cancel_wake")
             || state.active.as_deref() == Some(event.args.task.as_str()))
         && (!matches!(event.args.action.as_str(), "continue" | "switch")
             || !uncertain(&state, &event.args.task))
@@ -1281,12 +1318,18 @@ fn control_called(
             )
         })
         .map(|t| (t.id.clone(), t.generation));
+    #[cfg(feature = "wake")]
+    let proposal = wake::propose(&state, &event.args);
+    #[cfg(feature = "wake")]
+    let valid = valid && proposal.is_ok();
     if valid && state.control.is_none() && origin.is_some() {
         let (origin, origin_generation) = origin.unwrap();
         state.control = Some(PendingControl {
             request: event.args.clone(),
             origin,
             origin_generation,
+            #[cfg(feature = "wake")]
+            wake: proposal.unwrap(),
         });
         state.bump();
         commands
@@ -1296,6 +1339,10 @@ fn control_called(
                     "control accepted; applied after this batch is committed",
                 ),
             )));
+        #[cfg(feature = "wake")]
+        if event.args.action == "wait" {
+            probe("wake_control", &state);
+        }
     } else {
         commands.entity(event.call).insert(Outcome::refused(
             "invalid control action, task, generation, or another control is pending",
@@ -1329,6 +1376,8 @@ fn apply_control(world: &mut World) {
             })
             && (!matches!(control.action.as_str(), "continue" | "switch")
                 || !uncertain(state, &control.task));
+        #[cfg(feature = "wake")]
+        let valid = valid && wake::control_valid(state, &pending);
         if !valid {
             let mut state = world.get_mut::<DurableAgentState>(agent).unwrap();
             state.control = None;
@@ -1347,6 +1396,10 @@ fn apply_control(world: &mut World) {
         }
         let mut state = world.get_mut::<DurableAgentState>(agent).unwrap();
         match control.action.as_str() {
+            #[cfg(feature = "wake")]
+            "wait" | "cancel_wake" => {
+                wake::apply(&mut state, &pending);
+            }
             "continue" | "switch" => {
                 if let Some(old) = state.active.clone() {
                     if old != control.task {
@@ -1355,6 +1408,7 @@ fn apply_control(world: &mut World) {
                 }
                 state.active = Some(control.task.clone());
                 state.task_mut(&control.task).unwrap().status = Status::Running;
+                state.task_mut(&control.task).unwrap().outcome = None;
             }
             "defer" => {
                 state.task_mut(&control.task).unwrap().status = Status::Suspended;
@@ -1366,8 +1420,15 @@ fn apply_control(world: &mut World) {
         }
         state.control = None;
         state.bump();
+        #[cfg(feature = "wake")]
+        if control.action == "wait" {
+            probe("wake_scheduled", &state);
+        }
         drop(state);
-        if matches!(control.action.as_str(), "finish_silently" | "defer") {
+        if matches!(
+            control.action.as_str(),
+            "finish_silently" | "defer" | "wait"
+        ) {
             // An empty answer leaves a tool result at the transcript tail. Mark
             // that deliberate stop, so Rig does not infer an interrupted model
             // call from that tail on restart. Queued task continuation is saved
@@ -1376,9 +1437,44 @@ fn apply_control(world: &mut World) {
                 conversation.halt(rig_harness::rig_core::conversation::Halt::Kept);
             }
             if let Some(turn) = world.get::<ActiveTurn>(agent).map(ActiveTurn::turn) {
+                // On reopen Rig may have prepared the next turn call before the
+                // saved control is applied. Close that unstarted call even when
+                // it has not reached the adapted-model gate yet.
+                let calls: Vec<_> = world
+                    .query_filtered::<(Entity, &CallOf), (
+                        With<TurnCall>,
+                        Without<Started>,
+                        Without<Outcome>,
+                        Without<Settled>,
+                    )>()
+                    .iter(world)
+                    .filter(|(_, of)| of.0 == turn)
+                    .map(|(e, _)| e)
+                    .collect();
+                for call in calls {
+                    world.entity_mut(call).insert(Outcome::refused(
+                        "not_run: saved task control closed this turn",
+                    ));
+                    release(world, call);
+                }
+                #[cfg(feature = "wake")]
+                world.entity_mut(turn).insert(TurnOutcome::Stopped(None));
+                #[cfg(not(feature = "wake"))]
                 world.entity_mut(turn).insert(TurnOutcome::Answered(
                     rig_harness::rig_core::message::Message::assistant(""),
                 ));
+            }
+            #[cfg(feature = "wake")]
+            if control.action == "wait" {
+                let message = "Waiting requested. Print mode exits after saving; keep a live host for timed wake, or reopen to deliver overdue wakes.";
+                let print = world
+                    .get_resource::<rig_harness::host::cli::Cli>()
+                    .is_some_and(|c| c.front() == Some("print"));
+                world.write_message(if print {
+                    Notice::warn(agent, message)
+                } else {
+                    Notice::info(agent, message)
+                });
             }
         } else {
             // A call already composed while the control result was held must
@@ -1403,6 +1499,33 @@ fn apply_control(world: &mut World) {
     }
 }
 
+fn is_waiting(status: &Status) -> bool {
+    #[cfg(feature = "wake")]
+    {
+        *status == Status::Waiting
+    }
+    #[cfg(not(feature = "wake"))]
+    {
+        let _ = status;
+        false
+    }
+}
+
+fn can_continue(state: &DurableAgentState, task: &str) -> bool {
+    #[cfg(feature = "wake")]
+    {
+        !state
+            .wakes
+            .iter()
+            .any(|w| w.task == task && w.phase == wake::Phase::Fired && w.delivered.is_none())
+    }
+    #[cfg(not(feature = "wake"))]
+    {
+        let _ = (state, task);
+        true
+    }
+}
+
 #[cfg(not(feature = "checkpoint-probe"))]
 fn probe(_event: &str, _state: &DurableAgentState) {}
 
@@ -1415,6 +1538,28 @@ fn probe(event: &str, state: &DurableAgentState) {
         return;
     };
     let operation = state.operations.last();
+    #[cfg(feature = "wake")]
+    let wake_stage = match event {
+        "wake_control" => Some("before_wait_control"),
+        "wake_scheduled" => Some("before_schedule"),
+        "wake_fired" => Some("before_fire"),
+        "committed"
+            if state
+                .control
+                .as_ref()
+                .is_some_and(|c| c.request.action == "wait") =>
+        {
+            Some("after_wait_control")
+        }
+        "committed" => state.wakes.last().and_then(|w| match w.phase {
+            wake::Phase::Scheduled => Some("after_schedule"),
+            wake::Phase::Fired if w.delivered.is_some() => Some("after_delivery"),
+            wake::Phase::Fired if w.ready => Some("after_admission"),
+            wake::Phase::Fired => Some("after_fire"),
+            _ => None,
+        }),
+        _ => None,
+    };
     let stage = match (event, operation) {
         ("prepared", Some(op)) if op.outcome.is_none() => format!("before_intent:{}", op.kind),
         ("dispatch", Some(op)) => format!("after_intent:{}", op.kind),
@@ -1427,6 +1572,8 @@ fn probe(event: &str, state: &DurableAgentState) {
         }
         _ => String::new(),
     };
+    #[cfg(feature = "wake")]
+    let stage = wake_stage.map(str::to_owned).unwrap_or(stage);
     let pause = !stage.is_empty() && std::env::var("VIVY_DURABLE_PAUSE").is_ok_and(|s| s == stage);
     let result = (|| -> io::Result<()> {
         let mut file = std::fs::OpenOptions::new()

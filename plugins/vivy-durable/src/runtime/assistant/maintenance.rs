@@ -119,10 +119,11 @@ fn command(In(args): In<CommandArgs>, world: &mut World) {
 fn sources(state: &DurableAgentState) -> Vec<Source> {
     let mut sources = vec![];
     for task in &state.tasks {
-        if !matches!(
+        if (!matches!(
             task.status,
             Status::Completed | Status::Failed | Status::Cancelled | Status::Suspended
-        ) || task.outcome.is_none()
+        ) && !super::super::is_waiting(&task.status))
+            || task.outcome.is_none()
         {
             continue;
         }
@@ -152,6 +153,17 @@ fn sources(state: &DurableAgentState) -> Vec<Source> {
                 .unwrap()
             ),
         });
+    }
+    #[cfg(feature = "wake")]
+    for (id, text) in super::super::wake::sources(state) {
+        sources.push(Source { id, text });
+    }
+    // A wake can be observed in the foreground task and later in its target.
+    // Those projections share one immutable source; cover its bytes only once.
+    #[cfg(feature = "wake")]
+    {
+        let mut seen = std::collections::BTreeSet::new();
+        sources.retain(|s| seen.insert(s.id.clone()));
     }
     sources
 }
@@ -593,6 +605,45 @@ mod tests {
     use crate::runtime::tests::until;
     use rig_core::test_utils::MockCompletionModel;
     use rig_harness_test_support::{MemoryStore, reply};
+    #[cfg(feature = "wake")]
+    #[test]
+    fn one_wake_seen_by_two_tasks_has_one_recap_source() {
+        use crate::runtime::wake::{Delivery, Phase, WakeRecord};
+        let disk = MemoryStore::default();
+        let model = MockCompletionModel::from_stream_turns([reply("one"), reply("two")]);
+        let (mut app, agent) = super::super::tests::app(&disk, &model);
+        submit(app.world_mut(), agent, "test", "one", "one").unwrap();
+        until(&mut app, |w| {
+            committed(w, agent)
+                .is_some_and(|s| s.tasks[0].status == Status::Completed && s.active.is_none())
+        });
+        submit(app.world_mut(), agent, "test", "two", "two").unwrap();
+        until(&mut app, |w| {
+            committed(w, agent).is_some_and(|s| s.tasks[1].status == Status::Completed)
+        });
+        let mut state = inspect(app.world(), agent).unwrap().clone();
+        state.wakes.push(WakeRecord {
+            id: "wake:task:1".into(),
+            generation: 0,
+            task: "task:1".into(),
+            task_generation: 0,
+            created_ms: 1,
+            deadline_ms: 2,
+            reason: "two recipients".into(),
+            phase: Phase::Fired,
+            fired_ms: Some(3),
+            cancelled_ms: None,
+            step: Some(0),
+            ready: true,
+            delivered: Some(Delivery {
+                task: "task:2".into(),
+                step: 0,
+            }),
+        });
+        let entries = sources(&state);
+        let ids: std::collections::BTreeSet<_> = entries.iter().map(|s| &s.id).collect();
+        assert_eq!(ids.len(), entries.len());
+    }
     #[test]
     fn long_unicode_sources_are_covered_only_through_the_actual_requested_bytes() {
         let disk = MemoryStore::default();

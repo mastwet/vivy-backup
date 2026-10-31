@@ -6,6 +6,8 @@ pub enum Status {
     Queued,
     Running,
     Suspended,
+    #[cfg(feature = "wake")]
+    Waiting,
     Completed,
     Failed,
     Cancelled,
@@ -62,6 +64,8 @@ pub struct DurableAgentState {
     /// An ended foreground turn still owes a decision to delivered queued input.
     /// Human stop clears this; it never creates idle or scheduled work.
     pub decision_pending: bool,
+    #[cfg(feature = "wake")]
+    pub wakes: Vec<wake::WakeRecord>,
 }
 
 impl<'de> Deserialize<'de> for DurableAgentState {
@@ -77,6 +81,8 @@ impl<'de> Deserialize<'de> for DurableAgentState {
             operations: Vec<Operation>,
             control: Option<PendingControl>,
             decision_pending: bool,
+            #[cfg(feature = "wake")]
+            wakes: Vec<wake::WakeRecord>,
         }
         let wire = Wire::deserialize(deserializer)?;
         let state = Self {
@@ -88,6 +94,8 @@ impl<'de> Deserialize<'de> for DurableAgentState {
             operations: wire.operations,
             control: wire.control,
             decision_pending: wire.decision_pending,
+            #[cfg(feature = "wake")]
+            wakes: wire.wakes,
         };
         state.validate().map_err(serde::de::Error::custom)?;
         Ok(state)
@@ -117,14 +125,15 @@ impl DurableAgentState {
             return Err(invalid("active task does not exist"));
         }
         if let Some(control) = &self.control {
-            if !["continue", "switch", "defer", "finish_silently"]
-                .contains(&control.request.action.as_str())
+            if !control.request.valid_action()
                 || !ids.contains(&control.request.task)
                 || !ids.contains(&control.origin)
             {
                 return Err(invalid("invalid durable task control"));
             }
         }
+        #[cfg(feature = "wake")]
+        wake::validate(self)?;
         let mut operations = std::collections::BTreeSet::new();
         for op in &self.operations {
             if !operations.insert(&op.id)
@@ -197,6 +206,8 @@ impl Default for DurableAgentState {
             operations: Vec::new(),
             control: None,
             decision_pending: false,
+            #[cfg(feature = "wake")]
+            wakes: Vec::new(),
         }
     }
 }
@@ -216,10 +227,39 @@ impl DurableAgentState {
 #[derive(Clone, Debug, Serialize, Deserialize, schemars::JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Control {
-    /// continue, switch, defer or finish_silently. Scheduling is a later phase.
+    /// continue, switch, defer, finish_silently; wake builds also support wait and cancel_wake.
     pub action: String,
     pub task: String,
     pub generation: u64,
+    /// Relative wait in seconds, frozen as UTC when the control is accepted.
+    #[cfg(feature = "wake")]
+    #[serde(default)]
+    pub seconds: Option<u64>,
+    #[cfg(feature = "wake")]
+    #[serde(default)]
+    pub reason: Option<String>,
+    /// Required for cancel_wake; get the exact identity from wake_status.
+    #[cfg(feature = "wake")]
+    #[serde(default)]
+    pub wake_id: Option<String>,
+    #[cfg(feature = "wake")]
+    #[serde(default)]
+    pub wake_generation: Option<u64>,
+}
+
+impl Control {
+    pub(super) fn valid_action(&self) -> bool {
+        let ordinary =
+            ["continue", "switch", "defer", "finish_silently"].contains(&self.action.as_str());
+        #[cfg(feature = "wake")]
+        {
+            ordinary || matches!(self.action.as_str(), "wait" | "cancel_wake")
+        }
+        #[cfg(not(feature = "wake"))]
+        {
+            ordinary
+        }
+    }
 }
 
 /// Host-bound control proposal. The model supplies only `request`; origin and
@@ -230,6 +270,8 @@ pub struct PendingControl {
     pub request: Control,
     pub origin: String,
     pub origin_generation: u64,
+    #[cfg(feature = "wake")]
+    pub wake: Option<wake::Proposal>,
 }
 
 #[derive(Debug, Clone)]

@@ -1,5 +1,78 @@
 # Handoff: continue the independent assembly experiment
 
+## D3 persistent waits and wakes (2026-11-01)
+
+Branch `feat/d3-durable-wake`, based on D2 `c0bad0d`, in
+`C:/Users/Administrator/.codex/worktrees/aedb/vivy-test`. Use **new D3 sessions**.
+The D2 executable is preserved at `.workspace/d3/baseline/persistent-agent.exe`;
+keep its sessions with that binary. Main and the local Rig checkpoint fork
+(`810d7dfd`) are unchanged. No merge or push is included.
+
+```powershell
+$env:CARGO_TARGET_DIR = 'C:/vtd0'
+$env:CARGO_PROFILE_DEV_DEBUG = '0'
+$env:PYTHONUTF8 = '1'
+cargo run -p vivy -- build recipes/persistent-agent.yaml --rig-path C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable
+C:/vtd0/debug/vivy.exe run recipes/persistent-agent.yaml --rig-path C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable
+```
+
+The regular coding `start.cmd` remains unchanged. Use the existing gateway
+configuration with real model window facts. No new credentials are needed by
+the tests. A live terminal/JSON host is required for timely wakes; print mode
+persists Waiting and exits. Reopen a live host to process overdue schedules.
+This is not an OS service and does not wake a powered-off computer.
+
+Agent controls: `task_control` with wait/seconds/reason; `wake_status` for saved
+identity, generations and pending controls; cancel_wake for one outstanding
+schedule. A wake resumes the same task's context, and the agent can wait again,
+defer or finish silently. Human commands:
+
+```text
+/wake list
+/wake reschedule wake:task:1 0 60
+/wake cancel wake:task:1 1
+```
+
+Use the actual ID/generation from list. Commands create no task/Recap material.
+The mutation response reports pending state; a subsequent list reads the exact
+committed checkpoint. D3 stores schema v2, so removing wake support requires a
+new session. Rebuilding does not migrate existing sessions.
+
+Executed Windows verification: 34 root tests; 47 offline checkpoint/D1/D2/D3 tests
+(35 also passed with the D2 feature set), including
+repeated waits, nine fire/delivery reopen positions, saved-control reopen,
+tool-boundary yielding, target-only cancellation, stale generations, UTC changes,
+failed checkpoint append and immutable/deduplicated Recap sources. Native Windows
+smoke has passed repeated waits -> real shell -> silent finish, eight forced
+process exits around control/schedule/fire/input, print-mode waiting exit, and
+D1/D2 version refusals in both directions without log changes. The management
+list/reschedule/cancel sequence created no extra task or model request. D2's
+native context/Recap/no-Python and optional real native memory matrix passed,
+including a killed memory write reconciled with get rather than replay. D1's
+nine crash points plus shell/Python cancellation and ordinary coding smoke
+also passed. Formatting, Python compilation and Git whitespace checks passed.
+
+Reproduce with `scripts/rig_fork_probe.py --wake --rig <rig>`,
+`scripts/durable_wake_smoke.py <vivy.exe> <rig>`, and the existing D1/D2 smoke
+scripts (which now explicitly derive their original feature sets).
+Evidence is ignored under `.workspace/d3/`. The two-wait/one-tool fixture used
+four model requests, 14-15 ms wake lateness and 2,369,465 bytes of cumulative
+logs; diagnostic rebuild took 10.504 s. Reopen took 0.631-1.985 s with a saved
+control/fire, or 3.933 s when an uncertain control needed status inspection and
+resolution. These local synthetic observations do not establish long-running
+storage or general latency. The ordinary production executable also rebuilt;
+diagnostic fault hooks are absent without checkpoint-probe. No new terminal
+ConPTY, real-provider, OS-crash or power-loss acceptance is claimed. AD-2 and
+external channels remain outside this phase.
+
+A fresh independent read-only review inspected the complete D3 change and Rig
+inbox/clock behavior, finding no substantiated issue requiring correction. It
+inspected the run evidence and independently checked Git whitespace; it did not
+rerun the runtime suites. Multiple simultaneous overdue targets were assessed
+from the implementation, while the executed boundary test uses one overdue
+target during another task's tool. The production build's separate live JSON
+smoke passed wait/wake/silent completion with exit zero and no diagnostic trace.
+
 ## D2 persona, Recap and explicit memory (2026-11-01)
 
 Current branch: `feat/d2-assistant-context` in the same isolated worktree, based on

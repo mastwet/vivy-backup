@@ -64,7 +64,9 @@ def main() -> int:
     parser.add_argument("--rig", type=Path)
     parser.add_argument("--runtime", action="store_true", help="run D0 checkpoint and D1 runtime acceptance (requires --rig)")
     parser.add_argument("--assistant-context", action="store_true", help="also run D2 persona/Recap projection and maintenance tests (requires --rig)")
+    parser.add_argument("--wake", action="store_true", help="also run D3 durable wait/wake tests (requires --rig)")
     args = parser.parse_args()
+    args.assistant_context = args.assistant_context or args.wake
     args.runtime = args.runtime or args.assistant_context
     rig = args.rig.resolve(strict=True) if args.rig else None
     if args.runtime and not rig:
@@ -73,6 +75,8 @@ def main() -> int:
     output = ROOT / ".workspace/d0-d1/consumer" if args.runtime else ROOT / ".workspace/d0" / ("fork-probe" if rig else "stock-fork-probe")
     if args.assistant_context:
         output = ROOT / ".workspace/d2/consumer"
+    if args.wake:
+        output = ROOT / ".workspace/d3/consumer"
     output.mkdir(parents=True, exist_ok=True)
     manifest = output / "Cargo.toml"
     manifest.write_text(manifest_for((plugin / "Cargo.toml").read_text(encoding="utf-8"),
@@ -86,10 +90,12 @@ def main() -> int:
         report["diff_sha256"] = hashlib.sha256(diff).hexdigest()
         report["dirty"] = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=rig))
     report_path = output / "report.json"
+    if args.wake:
+        report['scope'] = 'D0/D1/D2 + D3 waiting/wake; process-crash only'
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     environment = probe_environment(os.environ)
     command = ["cargo", "test", "--offline", "--manifest-path", str(manifest),
-               "--features", "assistant-context,checkpoint-probe" if args.assistant_context else "runtime,checkpoint-probe" if args.runtime else "rig-fork-probe"]
+               "--features", "wake,checkpoint-probe" if args.wake else "assistant-context,checkpoint-probe" if args.assistant_context else "runtime,checkpoint-probe" if args.runtime else "rig-fork-probe"]
     with (output / "tests.log").open("w", encoding="utf-8") as log:
         result = subprocess.run(command, cwd=output, env=environment, stdout=log,
                                 stderr=subprocess.STDOUT, timeout=600)

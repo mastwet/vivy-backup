@@ -2,6 +2,46 @@ use super::*;
 use rig_core::test_utils::MockCompletionModel;
 use rig_harness_test_support::{MemoryStore, app_on, connect, first_agent, reply};
 
+#[cfg(feature = "wake")]
+#[test]
+fn wait_closes_turn_but_keeps_the_task_and_makes_no_idle_model_calls() {
+    let disk = MemoryStore::default();
+    let model = MockCompletionModel::from_stream_turns([
+        rig_harness_test_support::calls(
+            "wait-1",
+            "task_control",
+            json!({
+                "action":"wait", "task":"task:1", "generation":0,
+                "seconds":3600, "reason":"check later"
+            }),
+        ),
+        reply("must not be called while waiting"),
+    ]);
+    let (mut app, agent) = app(&disk, &model);
+    submit(
+        app.world_mut(),
+        agent,
+        "test",
+        "one",
+        "wait and continue later",
+    )
+    .unwrap();
+    until(&mut app, |w| {
+        !w.entity(agent).contains::<ActiveTurn>()
+            && inspect(w, agent).unwrap().tasks[0].outcome.is_some()
+    });
+    let state = inspect(app.world(), agent).unwrap();
+    assert_eq!(
+        serde_json::to_value(&state.tasks[0].status).unwrap(),
+        "waiting"
+    );
+    assert_eq!(state.tasks.len(), 1);
+    for _ in 0..20 {
+        app.update();
+    }
+    assert_eq!(model.request_count(), 1);
+}
+
 fn app(disk: &MemoryStore, model: &MockCompletionModel) -> (App, Entity) {
     let (mut app, _) = app_on(disk);
     app.add_plugins((AgentPlugin, SessionLogPlugin, DurablePlugin));

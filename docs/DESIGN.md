@@ -1,5 +1,56 @@
 # Decisions and assembly direction
 
+## D3 persistent waits and wakes (2026-11-01)
+
+The persistent recipe selects `vivy-durable/wake` at compilation. It includes
+`assistant-context` and retains DurablePlugin as the composition entry point.
+Required saved state `vivy.durable.v2` replaces v1 for **new D3 sessions only**.
+Both directions of incompatible open must refuse without modifying logs. D1/D2
+builds retain their prior schema. No Rig fork changes or new runtime/database
+are introduced by D3.
+
+- `task_control.wait` accepts seconds and a reason. Its pending control freezes
+  the UTC deadline, task generation and prior schedule generation. The state
+  change applies only after the control and sibling results commit. Waiting ends
+  the turn, retaining TaskId and operation numbering. `finish_silently` ends the
+  task; a wake cannot revive a completed/cancelled generation. D3 intentional
+  turn closure uses Rig's Stopped result without a StopTurn cancellation event;
+  the durable task status distinguishes Waiting, Suspended and Completed. This
+  lets print mode exit successfully without inventing an assistant answer.
+- A task has at most one outstanding one-shot wake. Replacements append a new
+  schedule generation and retain old occurrence data. Public Rust schedule/cancel
+  operations return pending state/revisions; callers verify inspect_committed.
+  `wake_status` reads committed schedules and pending controls. Unknown effects
+  use that evidence plus resolve_operation; the runtime never blindly replays a
+  schedule mutation. `/wake list`, `/wake cancel <id> <generation>` and `/wake
+  reschedule <id> <generation> <seconds>` are management commands, not tasks.
+- One WakeAt alarm tracks the earliest deadline across durable agents. UTC and
+  task/schedule state are checked again on each tick, including stale Due after
+  clock changes. A fire saves its occurrence and deterministic queued input
+  fields together. Delivery waits for that receipt and the subsequent admission
+  receipt. Restored native inbox entries are correlated by plugin authorship and
+  wake identity/generation; no duplicate user task or second queue is created.
+- While another task runs, native Incoming observes the existing single-tool
+  handoff: finish that tool, mark unstarted siblings not_run, then let the model
+  decide. A timer does not force a task switch. Cancellation/replacement withdraws
+  undelivered notices and targets one task, retaining unrelated foreground work.
+- Wake context identifies the plugin, target, reason, deadline and actual fire
+  time. It retains the target's input/tool records without importing the other
+  task's raw chat. Requests cannot dispatch before their projected context is
+  saved. Restored native calls that predate this receipt re-project; retries of
+  actual saved requests retain their frozen context/persona. Immutable lifecycle
+  source IDs survive future waits/cancellation. A source seen in two task
+  projections enters Recap once. Foreground wakes preempt unfinished Recap.
+- A live terminal or JSON host handles deadlines; `-p` saves Waiting and exits
+  with an explicit host-lifetime notice. Reopening re-arms future deadlines and
+  delivers overdue one-shots. There is no detached process, recurring catch-up,
+  cron or idle task creation. Interactive Recap remains separate maintenance.
+
+Acceptance and cost measurements are recorded in HANDOFF. Cumulative snapshot
+logs remain unbounded; D3 does not claim economical multi-day operation. AD-2,
+PEN/Neurolink transports and game-resident activities remain later work. The
+[approved implementation plan](plans/2026-11-01-d3-durable-wake.md) defines this scope.
+
 ## D2 assistant context implementation (2026-11-01)
 
 The persistent recipe now selects native Laputa and the optional durable
