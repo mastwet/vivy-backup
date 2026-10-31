@@ -15,7 +15,7 @@ fn app(disk: &MemoryStore, model: &MockCompletionModel) -> (App, Entity) {
     (app, agent)
 }
 
-fn until(app: &mut App, predicate: impl Fn(&World) -> bool) {
+pub(super) fn until(app: &mut App, predicate: impl Fn(&World) -> bool) {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(12);
     loop {
         app.update();

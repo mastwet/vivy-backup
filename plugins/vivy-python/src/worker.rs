@@ -342,7 +342,7 @@ impl Worker {
 
     pub fn execute(
         &mut self,
-        code: &str,
+        mut request: Value,
         timeout: Duration,
         live: Option<&Live>,
         cancellation: &Cancellation,
@@ -376,7 +376,8 @@ impl Worker {
             bytes: 0,
             live: live.cloned(),
         });
-        send(&self.input, json!({"type":"execute", "id":id, "code":code}))?;
+        request["id"] = json!(id);
+        send(&self.input, request)?;
         match receiver.recv_timeout(timeout) {
             Ok(reply) => reply,
             Err(error) => {

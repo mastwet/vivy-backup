@@ -10,6 +10,8 @@ use std::{
 pub(super) struct Checkpoints {
     stores: Arc<Mutex<BTreeMap<PathBuf, CheckpointStore>>>,
     pub committed: BTreeMap<String, DurableAgentState>,
+    #[cfg(feature = "assistant-context")]
+    contexts: BTreeMap<String, assistant::AssistantContextState>,
     seen: BTreeMap<String, (rig_harness::rig_core::conversation::Lineage, u64)>,
     initialized: bool,
 }
@@ -80,6 +82,19 @@ pub(super) fn initialize(world: &mut World) {
         .resource_mut::<Checkpoints>()
         .committed
         .extend(restored);
+    #[cfg(feature = "assistant-context")]
+    {
+        let contexts: Vec<_> = world
+            .query::<(&AgentId, &assistant::AssistantContextState)>()
+            .iter(world)
+            .filter(|(id, _)| store.receipt(&id.0).is_some())
+            .map(|(id, s)| (id.0.clone(), s.clone()))
+            .collect();
+        world
+            .resource_mut::<Checkpoints>()
+            .contexts
+            .extend(contexts);
+    }
 }
 
 pub(super) fn receipts(world: &mut World) {
@@ -121,6 +136,25 @@ pub(super) fn receipts(world: &mut World) {
                         .insert(id.clone(), state);
                 }
             }
+            #[cfg(feature = "assistant-context")]
+            if value["type"] == "state" && value["key"] == assistant::CONTEXT_KEY {
+                if let Ok(state) = serde_json::from_value::<assistant::AssistantContextState>(
+                    value["value"].clone(),
+                ) {
+                    if let Some(job) = state.jobs.last() {
+                        if job.phase == "received" {
+                            assistant::probe("after_result", &state);
+                        }
+                        if job.phase == "published" {
+                            assistant::probe("after_publish", &state);
+                        }
+                    }
+                    world
+                        .resource_mut::<Checkpoints>()
+                        .contexts
+                        .insert(id.clone(), state);
+                }
+            }
         }
         world
             .resource_mut::<Checkpoints>()
@@ -128,6 +162,15 @@ pub(super) fn receipts(world: &mut World) {
             .insert(id, identity);
         world.resource::<Wake>().wake();
     }
+}
+
+#[cfg(feature = "assistant-context")]
+pub(super) fn committed_context(
+    world: &World,
+    agent: Entity,
+) -> Option<&assistant::AssistantContextState> {
+    let id = &world.get::<AgentId>(agent)?.0;
+    world.resource::<Checkpoints>().contexts.get(id)
 }
 
 pub(super) fn committed<'a>(world: &'a World, agent: Entity) -> Option<&'a DurableAgentState> {

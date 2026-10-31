@@ -1,7 +1,7 @@
-# D1 execution validation on the shared core. Requires the local Rig checkpoint fork:
+# D2 assistant validation on the shared core. Requires the local Rig checkpoint fork:
 # vivy build recipes/persistent-agent.yaml --rig-path <rig-checkout>
 # vivy run recipes/persistent-agent.yaml --rig-path <rig-checkout> -- -p "hello"
-# Persona/Recap, timers and AutoDream follow in D2-D4. No native delegation,
+# New D2 sessions only; preserve D1 sessions and their executable. No native delegation,
 # coding-session management, compaction or history-mutation plugins are selected.
 name: persistent-agent
 rig:
@@ -81,6 +81,14 @@ components:
     path: ../plugins/vivy-python
     plugins:
       - vivy_python::PythonPlugin
+      - vivy_python::MemoryToolsPlugin
+    features:
+      vivy-python: [memory-tools]
+
+  - name: persona
+    crate: vivy-laputa
+    path: ../plugins/vivy-laputa
+    plugins: [vivy_laputa::LaputaPlugin]
 
   - name: print
     crate: rig-basics
@@ -100,6 +108,6 @@ components:
   - name: durable
     crate: vivy-durable
     path: ../plugins/vivy-durable
-    plugins: [vivy_durable::DurablePlugin]
+    plugins: [vivy_durable::DurablePlugin, vivy_durable::AssistantContextPlugin]
     features:
-      vivy-durable: [runtime]
+      vivy-durable: [assistant-context]

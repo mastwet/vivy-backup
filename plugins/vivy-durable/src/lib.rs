@@ -16,3 +16,5 @@ pub use checkpoint_probe::CheckpointProbePlugin;
 pub mod runtime;
 #[cfg(feature = "runtime")]
 pub use runtime::DurablePlugin;
+#[cfg(feature = "assistant-context")]
+pub use runtime::assistant::AssistantContextPlugin;

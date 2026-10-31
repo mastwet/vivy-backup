@@ -63,19 +63,23 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rig", type=Path)
     parser.add_argument("--runtime", action="store_true", help="run D0 checkpoint and D1 runtime acceptance (requires --rig)")
+    parser.add_argument("--assistant-context", action="store_true", help="also run D2 persona/Recap projection and maintenance tests (requires --rig)")
     args = parser.parse_args()
+    args.runtime = args.runtime or args.assistant_context
     rig = args.rig.resolve(strict=True) if args.rig else None
     if args.runtime and not rig:
         parser.error("--runtime requires --rig")
     plugin = ROOT / "plugins/vivy-durable"
     output = ROOT / ".workspace/d0-d1/consumer" if args.runtime else ROOT / ".workspace/d0" / ("fork-probe" if rig else "stock-fork-probe")
+    if args.assistant_context:
+        output = ROOT / ".workspace/d2/consumer"
     output.mkdir(parents=True, exist_ok=True)
     manifest = output / "Cargo.toml"
     manifest.write_text(manifest_for((plugin / "Cargo.toml").read_text(encoding="utf-8"),
                                      plugin, rig), encoding="utf-8")
     shutil.copyfile(plugin / "Cargo.lock", output / "Cargo.lock")
     report = {"status": "running", "rig": str(rig) if rig else "pinned upstream",
-              "scope": "D0 checkpoint + D1 runtime; process-crash only" if args.runtime else "serialization failure and existing D0 characterizations; no sync receipt"}
+              "scope": "D0/D1 + D2 assistant context; process-crash only" if args.assistant_context else "D0 checkpoint + D1 runtime; process-crash only" if args.runtime else "serialization failure and existing D0 characterizations; no sync receipt"}
     if rig:
         report["revision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=rig, text=True).strip()
         diff = subprocess.check_output(["git", "diff", "HEAD", "--"], cwd=rig)
@@ -85,7 +89,7 @@ def main() -> int:
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     environment = probe_environment(os.environ)
     command = ["cargo", "test", "--offline", "--manifest-path", str(manifest),
-               "--features", "runtime,checkpoint-probe" if args.runtime else "rig-fork-probe"]
+               "--features", "assistant-context,checkpoint-probe" if args.assistant_context else "runtime,checkpoint-probe" if args.runtime else "rig-fork-probe"]
     with (output / "tests.log").open("w", encoding="utf-8") as log:
         result = subprocess.run(command, cwd=output, env=environment, stdout=log,
                                 stderr=subprocess.STDOUT, timeout=600)

@@ -1,5 +1,77 @@
 # Handoff: continue the independent assembly experiment
 
+## D2 persona, Recap and explicit memory (2026-11-01)
+
+Current branch: `feat/d2-assistant-context` in the same isolated worktree, based on
+`2eb70d6`. Rig remains `810d7dfd` in the path below. Main and the Rig fork are
+unchanged; no merge/push is part of this delivery. The previous D0/D1 section is
+historical. A D1 executable is preserved in `.workspace/d2/baseline/`.
+
+```powershell
+$env:CARGO_TARGET_DIR = 'C:/vtd0'
+$env:CARGO_PROFILE_DEV_DEBUG = '0'
+$env:PYTHONUTF8 = '1'
+cargo run -p vivy -- build recipes/persistent-agent.yaml --rig-path C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable
+C:/vtd0/debug/vivy.exe run recipes/persistent-agent.yaml --rig-path C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable
+```
+
+Configure a real gateway through the existing settings/provider flow, including
+its actual `context_window` and output limit. No credentials are supplied here.
+Use a new session; do not resume D1 or coding sessions with the D2 binary.
+The default `start.cmd` still launches the coding recipe. No product face was
+changed by D2.
+
+Commands: `/persona show`, `/persona update <expected-revision> <text-file>`,
+`/persona rollback <expected-revision> <target-revision>`, `/recap status`, and
+`/recap refresh`. Management commands are not tasks or summary sources. Persona
+updates affect new operations, not retries. New input preempts background Recap;
+there may be a gap until recent closed tasks reach the committed summary. No raw
+chat tail or automatic retrieval fills that gap. On summary failure, inspect
+status, correct the cause and refresh. Print/JSON foreground completion does not
+wait for automatic maintenance; explicit JSON refresh and recovery of saved
+maintenance require keeping that process alive.
+
+`memory-tools` is selected in the persistent recipe, with memory disabled by
+runtime default. Existing `/python prepare` and `[python] memory=true` configure
+the same native backend as before. Removing the Python component and rebuilding
+removes the workbench and typed tools entirely; Recap still works. Do not use
+private palaces for acceptance.
+
+Executed Windows checks (synthetic loopback unless noted):
+
+- Root: 34 tests; durable checkpoint/D1/D2 consumer: 35 tests; Laputa: 5 tests;
+  Rust workbench with typed tools: 22 tests; prepared Python/native suite: 45
+  tests. Offline model tests require no keys. Reproduce the durable consumer with
+  `python scripts/rig_fork_probe.py --assistant-context --rig <rig-checkout>`.
+  The prepared interpreter on this machine can write its native asset root but
+  not the default Windows temporary directory. Python tests passed with `TEMP`
+  and `TMP` set to that isolated root's `tmp`; the first run failed at temporary
+  file creation. The system Python has an incompatible MemPalace installation;
+  use the prepared environment and `VIVY_MEMORY_TEST_ROOT`, not system packages.
+- `scripts/assistant_context_smoke.py <vivy.exe> <rig>` builds the ordinary and
+  no-Python diagnostic variants, captures actual requests, checks tool continuity,
+  raw-history exclusion, persona updates, transient summary retry, preemption,
+  four summary crash boundaries and unchanged D1 logs on incompatible reopen.
+  `--memory-assets <isolated-prepared-workbench-root>` adds real native
+  remember/get/search and a process-killed write reconciled with get, not replay.
+- The recorded joint run used 25 model requests (294,205 serialized request
+  bytes). New foreground completed in 0.215 s while a summary response was blocked.
+  Reopen took 2.005–2.161 s when a model retry was needed and 0.081–0.240 s with a
+  saved result/publication. Warm diagnostic builds took 8.639 s and 5.420 s;
+  these are observed local runs, not general performance claims.
+- The three-task fixture's log was 1,557,448 bytes. Cumulative snapshots remain
+  a significant retention cost; disk use is not bounded by Recap context size.
+- `scripts/smoke.py` retains coding gateway, tools, Python state/reset, sessions,
+  JSON, error, credential filtering and model-fact behavior. The D1 crash matrix
+  explicitly derives a D1-only variant after this recipe change.
+
+Evidence is ignored under `.workspace/d2/`; the implementation plan records the
+final review. No new real-provider compatibility is claimed: the prior owner
+ruling deferred provider verification, and no complete authorized replacement
+credential/model pair was available. Existing Rig Windows baseline failures
+remain as recorded under D0/D1. D3 sleep/wake and AD-2 evolution are still future
+work. Log retention deserves measurement before a long-running deployment.
+
 ## D0/D1 local runtime (2026-10-31)
 
 The grouped-checkpoint D0 consumer and minimal D1 runtime now run through the

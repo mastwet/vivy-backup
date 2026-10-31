@@ -638,6 +638,48 @@ async def _run_guarded(task: asyncio.Task[Any], rid: str) -> tuple[str, Any, dic
             _active["rid"] = None
 
 
+async def _memory_call(req: dict[str, Any], ns: dict[str, Any]) -> Any:
+    from .memory import Memory
+    operations = {'remember': Memory.remember, 'get': Memory.get, 'search': Memory.search}
+    action, arguments = req['action'], req.get('arguments')
+    if action not in operations or not isinstance(arguments, dict):
+        raise ValueError('memory requires remember/get/search and an arguments object')
+    memory = ns.get('memory')
+    if type(memory) is not Memory:
+        raise RuntimeError('Native memory namespace is unavailable; enable and prepare memory, then reset the worker')
+    # Fixed facade methods, never eval or a model-selected Python attribute.
+    return await operations[action](memory, **arguments)
+
+
+async def _handle_memory(req: dict[str, Any], ns: dict[str, Any]) -> None:
+    rid = req['id']
+    token = _current_cell.set(rid)
+    try:
+        status, value, error = await _run_guarded(asyncio.create_task(_memory_call(req, ns)), rid)
+        text = None
+        try:
+            if _consume_handoff_interrupt() and status == 'ok':
+                status, error = 'error', _error_event(rid, KeyboardInterrupt())
+            if status == 'ok':
+                text = json.dumps(value, ensure_ascii=False)
+                if len(text) > _RESULT_TEXT_CAP:
+                    from .artifacts import save
+                    artifact = save(text, 'application/json')
+                    _send({'event': 'artifact', 'id': rid, 'artifact': artifact})
+                text = _cap_text(text)
+            _drain_output()
+        finally:
+            _finish_request(rid)
+        if text is not None:
+            _send({'event': 'result', 'id': rid, 'text': text})
+        if error is not None:
+            _send(error)
+        from .capabilities import memory_status
+        _send({'event': 'done', 'id': rid, 'status': status, 'memory': memory_status(ns)})
+    finally:
+        _current_cell.reset(token)
+
+
 async def _handle_execute(req: dict[str, Any], ns: dict[str, Any]) -> None:
     global _cell_counter
     cell_id = req["id"]
@@ -822,6 +864,8 @@ async def _serve(queue: asyncio.Queue[dict[str, Any]], ns: dict[str, Any]) -> No
             return
         if rtype == "execute":
             await _handle_request(_handle_execute, req, ns)
+        elif rtype == "memory":
+            await _handle_request(_handle_memory, req, ns)
         elif rtype == "list_names":
             await _handle_request(_handle_list_names, req, ns)
         elif rtype == "mcp_status":
@@ -832,6 +876,7 @@ async def _serve(queue: asyncio.Queue[dict[str, Any]], ns: dict[str, Any]) -> No
 
 _REQUIRED_FIELDS = {
     "execute": ("id", "code"),
+    "memory": ("id", "action"),
     "list_names": ("id",),
     # mcp_status's server list is a JSON array, so only its id is a
     # string-required field; the handler validates the list itself.

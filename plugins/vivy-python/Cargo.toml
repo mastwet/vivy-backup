@@ -5,6 +5,9 @@ edition = "2024"
 rust-version = "1.97.1"
 publish = false
 
+[features]
+memory-tools = []
+
 [dependencies]
 rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }
 bevy_ecs = { version = "=0.20.0", default-features = false, features = ["std"] }

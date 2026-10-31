@@ -1,5 +1,67 @@
 # Decisions and assembly direction
 
+## D2 assistant context implementation (2026-11-01)
+
+The persistent recipe now selects native Laputa and the optional durable
+`assistant-context` feature on the same Rig execution path. This supersedes D1's
+raw-conversation fixture below. Use **new D2 sessions**; D1 data stays with the D1
+build, and incompatible opens are refused without changing the logs. The local
+Rig checkpoint fork remains required; this change does not modify that fork or
+the production Rig revision.
+
+- `vivy-laputa` owns `.vivy/laputa/persona.json`, immutable update snapshots and
+  an OS writer lock. Missing persona is empty revision zero. CAS updates and
+  rollback publish atomically with update-ID reconciliation. Persona precedes
+  the base role; SYSTEM/CLI role replacement does not replace managed persona.
+  New model operations reload it; model retries reuse the frozen actual request.
+- Required `vivy.assistant-context.v1` state shares D1's exact checkpoint receipts.
+  Requests contain persona/instructions, the latest committed Recap, current
+  task execution records and explicitly delivered pending input. Other tasks'
+  raw history, pending summary material and unsolicited memory results are absent.
+  Current task tool pairs remain intact, including task switches and reopen.
+  Projection waits for the task admission receipt; it never releases raw fallback.
+  Context references freeze persona/Recap revisions and source IDs with the actual
+  request digest. Missing model window facts or oversized required context suspend
+  execution with an error while preserving the input.
+- Recap is one separately owned Rig model effect per agent, with no foreground
+  turn. It saves the exact request, route, attempt, deadlines, source byte ranges,
+  final result and publication. It uses Rig retries, `WakeAt`, cancellation,
+  summary validation and receipt gates; there is no second model loop or daemon.
+  New foreground work cancels unfinished synthesis and uses the old committed
+  Recap immediately. Late replies cannot publish. Saved complete results publish
+  after restart without another request. Long sources are processed in UTF-8-safe
+  slices; only the bytes actually sent advance coverage. Failed summaries preserve
+  old Recap and pending material and expose an error until refresh.
+- Interactive idle maintenance is independent of the autonomy switch. Print/JSON
+  frontends do not automatically start new maintenance; `/recap refresh` can
+  explicitly request it in JSON. A live process is still required. Source times
+  are host observation times, not synthesis time or invented external timestamps.
+  The routine output cap is 2,048 tokens, reduced by model limits, with concise
+  event/commitment/correction/status instructions. This is a request sizing choice,
+  not a new autonomy policy.
+- Optional `MemoryToolsPlugin` (`vivy-python/memory-tools`) supplies
+  `memory_remember`, `memory_get` and `memory_search` over the existing worker and
+  native MemPalace facade. Structured messages do not evaluate argument strings as
+  Python. Durable dispatch fills omitted workspace source and session/agent/task/
+  step event IDs before saving the intent. Missing session/agent IDs fail. Explicit
+  get/search can inspect uncertain writes; their original identities are exposed
+  in recovery context, without authorizing arbitrary `python_repl` inspection.
+  Read results must be complete before reconciliation; no blind write replay.
+  This trusted workbench is not a sandbox against earlier arbitrary Python code.
+  Memory remains off until configured/prepared and can be omitted at compilation.
+
+No D3 scheduling, D4 AutoDream, delegation/coding-session management or owner
+classification is added. Windows executable checks use a scripted gateway; native
+MemPalace is separately exercised. Real-provider verification and semantic summary quality remain unverified.
+Process termination/restart is covered; OS or power-loss durability is not.
+
+The measured three-task fixture wrote about 1.56 MB of checkpoint logs. D1's
+cumulative task/operation snapshots and D2's retained summary jobs duplicate
+material across appends; retention/compaction is not delivered. Do not interpret
+bounded model context as bounded disk use or claim economical always-on operation.
+The [handoff](HANDOFF.md#d2-persona-recap-and-explicit-memory-2026-11-01) records
+commands and measured acceptance.
+
 ## D0/D1 implementation boundary (2026-10-31)
 
 The local Rig fork now supplies the missing D0 checkpoint seams; Vivy's separate

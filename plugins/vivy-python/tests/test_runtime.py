@@ -94,6 +94,22 @@ class RuntimeTests(unittest.TestCase):
         self.send(type='unknown')
         self.assertEqual(self.next().get('ename'), 'ProtocolError')
 
+    def test_typed_memory_request_never_executes_arguments_or_rebound_objects(self):
+        self.run_cell("memory = object(); untouched = 42")
+        self.send(type='memory', id='typed', action='get', arguments={'identifier': "__import__('os')._exit(7)"})
+        first = self.next()
+        self.assertEqual(first.get('id'), 'typed', first)
+        self.assertEqual(first['event'], 'error')
+        self.assertEqual(self.next()['status'], 'error')
+        self.assertTrue(any(e.get('text') == '42' for e in self.run_cell('untouched', 'still-alive')))
+
+    def test_typed_memory_rejects_arbitrary_operation_names(self):
+        self.send(type='memory', id='invalid', action='__getattribute__', arguments={'name': 'anything'})
+        error = self.next()
+        self.assertEqual(error.get('id'), 'invalid', error)
+        self.assertEqual(error.get('ename'), 'ValueError', error)
+        self.assertEqual(self.next()['status'], 'error')
+
     def test_repr_spills_before_truncation_and_unknown_mime_is_preserved(self):
         events = self.run_cell("'中文' * 200000")
         artifacts = [e['artifact'] for e in events if e['event'] == 'artifact']

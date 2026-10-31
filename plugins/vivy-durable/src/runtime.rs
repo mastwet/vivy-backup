@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, io};
+#[cfg(feature = "assistant-context")]
+pub mod assistant;
 mod state;
 mod storage;
 use state::workspace;
@@ -55,6 +57,8 @@ fn inspection_tool(name: &str) -> bool {
         "search",
         "task_control",
         "resolve_operation",
+        "memory_get",
+        "memory_search",
     ]
     .contains(&name)
 }
@@ -472,6 +476,17 @@ fn admit_inputs(world: &mut World) {
         if world.get::<DurableAgentState>(agent).is_none() {
             continue;
         }
+        #[cfg(feature = "assistant-context")]
+        if world
+            .get::<assistant::AssistantContextState>(agent)
+            .is_some()
+            && input
+                .command()
+                .is_some_and(|s| matches!(s.split_whitespace().next(), Some("persona" | "recap")))
+        {
+            release(world, call);
+            continue;
+        }
         hold(world, call);
         let task = match task {
             Some(task) => task,
@@ -573,6 +588,10 @@ fn replay(world: &mut World) {
         .map(|(e, of, t, m, a)| (e, of.0, t.cloned(), m.cloned(), a.cloned()))
         .collect();
     for (call, agent, tool, model, adapted) in restored {
+        #[cfg(feature = "assistant-context")]
+        if assistant::is_maintenance(world, call) {
+            continue;
+        }
         let Some(state) = world.get::<DurableAgentState>(agent).cloned() else {
             continue;
         };
@@ -728,7 +747,11 @@ fn gate(world: &mut World) {
         .collect();
     calls.sort_by_key(|c| c.2);
     let mut first_tool = BTreeMap::new();
-    for (call, agent, _, tool, model, adapted) in calls {
+    for (call, agent, _, mut tool, model, adapted) in calls {
+        #[cfg(feature = "assistant-context")]
+        if assistant::is_maintenance(world, call) {
+            continue;
+        }
         let Some(mut state) = world.get::<DurableAgentState>(agent).cloned() else {
             continue;
         };
@@ -792,6 +815,40 @@ fn gate(world: &mut World) {
             && previously_bound.is_some()
         {
             continue;
+        }
+        // Persist exactly the identities the worker will receive. Preparation
+        // happens for siblings together; the serial gate owns the logical step.
+        if let Some(request) = &mut tool {
+            if request.call.function.name.as_str() == "memory_remember" {
+                let identity = world
+                    .get_resource::<SessionPaths>()
+                    .and_then(|p| p.0.id())
+                    .zip(world.get::<AgentId>(agent));
+                let Some((session, agent_id)) = identity else {
+                    decide(
+                        world,
+                        call,
+                        Outcome::refused(
+                            "Memory writes require a saved session and stable agent identity",
+                        ),
+                    );
+                    continue;
+                };
+                let step = previously_bound
+                    .as_ref()
+                    .and_then(|b| state.operations.iter().find(|o| o.id == b.operation))
+                    .map_or(task.next_step, |o| o.step);
+                {
+                    let args = &mut request.call.function.arguments;
+                    args.entry("source_id").or_insert_with(|| {
+                        json!(format!("workspace:{}", digest(&state.workspace)))
+                    });
+                    args.entry("event_id").or_insert_with(|| {
+                        json!(format!("{session}/{}/{task_id}/{step}", agent_id.0))
+                    });
+                }
+                world.entity_mut(call).insert(request.clone());
+            }
         }
         let (kind, request, route, call_id) = if let Some(tool) = &tool {
             (
@@ -872,6 +929,10 @@ fn gate(world: &mut World) {
         };
         let operation = state.operations[index].clone();
         world.entity_mut(agent).insert(state.clone());
+        #[cfg(feature = "assistant-context")]
+        if kind == "model" && !assistant::intent_ready(world, agent, call, &operation) {
+            continue;
+        }
         probe("prepared", &state);
         if world
             .get::<Decision>(call)
@@ -907,6 +968,10 @@ fn capture(world: &mut World) {
         .map(|(e, of, t)| (e, of.0, t.cloned()))
         .collect();
     for (call, agent, tool) in unbound {
+        #[cfg(feature = "assistant-context")]
+        if assistant::is_maintenance(world, call) {
+            continue;
+        }
         let Some(mut state) = world.get_mut::<DurableAgentState>(agent) else {
             continue;
         };
@@ -1138,7 +1203,13 @@ fn context(
             .operations
             .iter()
             .filter(|o| o.phase == "unknown")
-            .map(|o| json!({"operation":o.id,"generation":o.generation,"resolution":o.resolution}))
+            .map(|o| {
+                let memory=if o.request["function"]["name"]=="memory_remember" {
+                    let args=&o.request["function"]["arguments"];
+                    json!({"source_id":args["source_id"],"event_id":args["event_id"]})
+                } else {Value::Null};
+                json!({"operation":o.id,"generation":o.generation,"resolution":o.resolution,"memory_identity":memory})
+            })
             .collect();
         let reconciling = state.active.as_ref().is_some_and(|id| uncertain(state, id));
         if reconciling {

@@ -22,7 +22,11 @@ use std::time::Instant;
 use vivy_process::{Control, OwnedChild};
 
 mod management;
+#[cfg(feature = "memory-tools")]
+mod memory_tools;
 mod worker;
+#[cfg(feature = "memory-tools")]
+pub use memory_tools::MemoryToolsPlugin;
 use vivy_basics::workbench_status::{MemoryState, PythonState, WorkbenchStatus};
 use worker::Worker;
 
@@ -100,7 +104,19 @@ fn bind_calls(
     paths: Option<Res<SessionPaths>>,
 ) {
     for (call, request, agent, mut handler) in &mut calls {
-        if request.call.function.name.as_str() != PythonTool::NAME {
+        let name = request.call.function.name.as_str();
+        #[cfg(feature = "memory-tools")]
+        let memory = memory_tools::is_tool(name);
+        #[cfg(not(feature = "memory-tools"))]
+        let memory = false;
+        if name != PythonTool::NAME && !memory {
+            continue;
+        }
+        if memory && (ids.get(agent.0).is_err() || paths.as_ref().and_then(|p| p.0.id()).is_none())
+        {
+            commands.entity(call).insert(Outcome::refused(
+                "Memory tools require a saved session and stable agent identity",
+            ));
             continue;
         }
         let place = places.place(Some(agent.0), workspace.0.clone());
@@ -126,6 +142,11 @@ fn bind_calls(
             live: Some(live),
             spill: scratch.as_ref().and_then(|scratch| scratch.spill()),
         };
+        #[cfg(feature = "memory-tools")]
+        if let Some(bound) = memory_tools::bind(name, &tool) {
+            *handler = CallHandler(bound);
+            continue;
+        }
         *handler = CallHandler(Handler(ErasedHandler::new(ToolAdapter::new(tool))));
     }
 }
@@ -353,6 +374,19 @@ impl PythonTool {
         args: PythonArgs,
         cancellation: &Arc<Cancellation>,
     ) -> Result<(String, bool), ToolExecutionError> {
+        self.execute_frame(
+            json!({"type":"execute","code":args.code}),
+            args.timeout_secs,
+            cancellation,
+        )
+    }
+
+    fn execute_frame(
+        &self,
+        request: Value,
+        timeout_secs: Option<u64>,
+        cancellation: &Arc<Cancellation>,
+    ) -> Result<(String, bool), ToolExecutionError> {
         let error = |why| {
             ToolExecutionError::other(format!("Python workbench stopped; variables reset: {why}"))
         };
@@ -429,9 +463,9 @@ impl PythonTool {
         };
         *self.state.control.lock().unwrap_or_else(|e| e.into_inner()) =
             Some(worker.process.control());
-        let timeout = Duration::from_secs(args.timeout_secs.unwrap_or(60).max(1));
+        let timeout = Duration::from_secs(timeout_secs.unwrap_or(60).max(1));
         let reply = worker
-            .execute(&args.code, timeout, self.live.as_ref(), cancellation)
+            .execute(request, timeout, self.live.as_ref(), cancellation)
             .map_err(error)?;
         {
             let mut active = self

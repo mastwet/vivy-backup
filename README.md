@@ -65,6 +65,14 @@ recipe path, defaulting to `recipes/coding-agent.yaml`. It stops before
 compiling when that build's `vivy.exe` or agent is still running, because
 Windows cannot replace a running executable.
 
+## Experimental persistent assistant
+
+`recipes/persistent-agent.yaml` selects D2 persona and asynchronous Recap-only
+context on the local Rig checkpoint fork. It is separate from the coding recipe
+and needs new sessions. Background summary work yields to new foreground input;
+optional native memory is accessed only through explicit tools. Build/run steps,
+commands and verification limits are in the [D2 handoff](docs/HANDOFF.md#d2-persona-recap-and-explicit-memory-2026-11-01).
+
 ## Providers and runtime settings
 
 Start the terminal and run `/provider`. Add a built-in preset or a custom

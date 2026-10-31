@@ -14,6 +14,7 @@ d0-probe = []
 rig-fork-probe = ["d0-probe"]
 checkpoint-probe = []
 runtime = ["dep:vivy-gateway", "dep:schemars"]
+assistant-context = ["runtime", "dep:vivy-laputa"]
 
 [dependencies]
 rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }
@@ -25,6 +26,7 @@ serde_json = "1"
 sha2 = "0.10"
 schemars = { version = "1", optional = true }
 vivy-gateway = { path = "../vivy-gateway", default-features = false, optional = true }
+vivy-laputa = { path = "../vivy-laputa", optional = true }
 
 [dev-dependencies]
 rig-core = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776", features = ["test-utils"] }
