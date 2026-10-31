@@ -50,18 +50,23 @@ fn system(request: &rig_core::completion::CompletionRequest) -> String {
 }
 
 #[test]
-fn plan_and_subagents_have_explicit_native_stage_order() {
-    let (mut app, _) = app_on(&MemoryStore::default());
-    app.add_plugins((
-        AgentPlugin,
-        SessionLogPlugin,
-        PlanPlugin,
-        crate::subagents::VivySubagentsPlugin,
-    ));
-    app.finish();
-    app.update();
-    let conflicts = rig_harness::stage_conflicts(app.world_mut());
-    assert!(conflicts.is_empty(), "{}", conflicts.join("\n"));
+fn plan_context_and_subagents_have_explicit_native_stage_order() {
+    for subagents in [false, true] {
+        let (mut app, _) = app_on(&MemoryStore::default());
+        app.add_plugins((
+            AgentPlugin,
+            SessionLogPlugin,
+            PlanPlugin,
+            crate::context::ContextFilesPlugin,
+        ));
+        if subagents {
+            app.add_plugins(crate::subagents::VivySubagentsPlugin);
+        }
+        app.finish();
+        app.update();
+        let conflicts = rig_harness::stage_conflicts(app.world_mut());
+        assert!(conflicts.is_empty(), "{}", conflicts.join("\n"));
+    }
 }
 
 #[test]

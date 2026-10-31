@@ -1,6 +1,6 @@
 use rig_harness::prelude::*;
 use rig_tui::ratatui::text::Line;
-use rig_tui::{RenderBatch, ToolCallView};
+use rig_tui::{LookLine, RenderBatch, ToolCallView};
 use serde_json::Value;
 
 pub(super) fn add(app: &mut App) {
@@ -23,18 +23,22 @@ fn draw_calls(mut batch: ResMut<RenderBatch>) {
     }
 }
 
-fn draw(view: &ToolCallView<'_>) -> Vec<Line<'static>> {
+fn draw(view: &ToolCallView<'_>) -> Vec<LookLine> {
     let title = if view.name() == "task_chain" {
         "Chain"
     } else {
         "Parallel"
     };
     let Some(text) = view.result_text() else {
-        let mut lines = vec![view.header(format!("vivy-test {title}"), "")];
+        let mut lines = vec![view.header(format!("vivy-test {title}"), "").into()];
         if let Some(output) = view.output {
-            lines.extend(output.lines().map(|line| Line::from(line.to_owned())));
+            lines.extend(
+                output
+                    .lines()
+                    .map(|line| Line::from(line.to_owned()).into()),
+            );
         } else {
-            lines.extend(view.progress_lines());
+            lines.extend(view.progress_lines().into_iter().map(Into::into));
         }
         for child in view.children.iter().rev().take(6).rev() {
             let state = if child.failed {
@@ -46,29 +50,35 @@ fn draw(view: &ToolCallView<'_>) -> Vec<Line<'static>> {
                     _ => "running",
                 }
             };
-            lines.push(Line::from(format!(
-                "  {} · {} · {state}",
-                child.agent.as_deref().unwrap_or("child"),
-                child.name
-            )));
+            lines.push(
+                Line::from(format!(
+                    "  {} · {} · {state}",
+                    child.agent.as_deref().unwrap_or("child"),
+                    child.name
+                ))
+                .into(),
+            );
         }
         return lines;
     };
     let Ok(result) = serde_json::from_str::<Value>(&text) else {
-        let mut lines = vec![view.header(format!("vivy-test {title}"), "")];
+        let mut lines = vec![view.header(format!("vivy-test {title}"), "").into()];
         lines.extend(view.result_lines());
         return lines;
     };
-    let mut lines = vec![view.header(
-        format!("vivy-test {title}"),
-        format!("{}/{} completed", result["completed"], result["total"]),
-    )];
+    let mut lines = vec![
+        view.header(
+            format!("vivy-test {title}"),
+            format!("{}/{} completed", result["completed"], result["total"]),
+        )
+        .into(),
+    ];
     for row in result["results"].as_array().into_iter().flatten() {
         let status = row["status"].as_str().unwrap_or("unknown");
         let name = row["description"].as_str().unwrap_or("Task");
         let id = row["agent"].as_str().unwrap_or("not started");
-        lines.push(Line::from(format!("{name} · {status} · {id}")));
-        lines.push(Line::from(usage(row.get("usage"))));
+        lines.push(Line::from(format!("{name} · {status} · {id}")).into());
+        lines.push(Line::from(usage(row.get("usage"))).into());
         if let Some(answer) = row["answer"].as_str() {
             lines.extend(rig_tui::markdown::render(answer, &view.theme, None));
         }

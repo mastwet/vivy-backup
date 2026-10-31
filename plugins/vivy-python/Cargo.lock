@@ -962,6 +962,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "errno"
+version = "0.3.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
+dependencies = [
+ "libc",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "event-listener"
 version = "5.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2266,7 +2276,7 @@ dependencies = [
 [[package]]
 name = "rig-basics"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "async-channel",
  "bevy_app",
@@ -2286,12 +2296,13 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "unicode-width",
 ]
 
 [[package]]
 name = "rig-cassette"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "base64 0.22.1",
  "futures",
@@ -2304,7 +2315,7 @@ dependencies = [
 [[package]]
 name = "rig-core"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "async-stream",
  "base64 0.22.1",
@@ -2337,7 +2348,7 @@ dependencies = [
 [[package]]
 name = "rig-derive"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "convert_case 0.11.0",
  "proc-macro-crate",
@@ -2349,7 +2360,7 @@ dependencies = [
 [[package]]
 name = "rig-ecs"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
@@ -2372,7 +2383,7 @@ dependencies = [
 [[package]]
 name = "rig-harness"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "bevy",
  "bevy_app",
@@ -2382,6 +2393,7 @@ dependencies = [
  "bevy_tasks",
  "crossbeam-channel",
  "ctrlc",
+ "libc",
  "rig-core",
  "rig-ecs",
  "rig-harness-protocol",
@@ -2390,6 +2402,7 @@ dependencies = [
  "rig-tools",
  "serde",
  "serde_json",
+ "signal-hook",
  "tokio",
  "toml",
 ]
@@ -2397,12 +2410,12 @@ dependencies = [
 [[package]]
 name = "rig-harness-protocol"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 
 [[package]]
 name = "rig-http"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "bytes",
  "futures",
@@ -2417,7 +2430,7 @@ dependencies = [
 [[package]]
 name = "rig-memory"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "base64 0.22.1",
  "memchr",
@@ -2431,7 +2444,7 @@ dependencies = [
 [[package]]
 name = "rig-reqwest"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "bytes",
  "futures",
@@ -2447,7 +2460,7 @@ dependencies = [
 [[package]]
 name = "rig-tools"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "base64 0.22.1",
  "futures",
@@ -2467,7 +2480,7 @@ dependencies = [
 [[package]]
 name = "rig-tungstenite"
 version = "0.46.0-rc.1"
-source = "git+https://github.com/0xPlaygrounds/rig?rev=e1cd47d57f0bccb50ddffd6f45de2ac3365b271c#e1cd47d57f0bccb50ddffd6f45de2ac3365b271c"
+source = "git+https://github.com/0xPlaygrounds/rig?rev=fc556f982d501eea9d7167398a19386e4884e776#fc556f982d501eea9d7167398a19386e4884e776"
 dependencies = [
  "futures",
  "rig-http",
@@ -2746,8 +2759,6 @@ version = "1.0.154"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6"
 dependencies = [
- "foldhash",
- "indexmap",
  "itoa",
  "memchr",
  "serde",
@@ -2824,6 +2835,26 @@ name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+
+[[package]]
+name = "signal-hook"
+version = "0.3.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d881a16cf4426aa584979d30bd82cb33429027e42122b169753d6ef1085ed6e2"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
+]
+
+[[package]]
+name = "signal-hook-registry"
+version = "1.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
+dependencies = [
+ "errno",
+ "libc",
+]
 
 [[package]]
 name = "simd_cesu8"

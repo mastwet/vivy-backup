@@ -9,6 +9,6 @@ publish.workspace = true
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde-saphyr = "2"
-rig-harness-protocol = { git = "https://github.com/0xPlaygrounds/rig", rev = "e1cd47d57f0bccb50ddffd6f45de2ac3365b271c" }
+rig-harness-protocol = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }
 ctrlc = "3"
 vivy-process = { path = "../vivy-process" }

@@ -141,7 +141,9 @@ max_output_tokens = 1000
                 run("--model", f"{provider}/org/model-1", "-p", "FAIL_WIRE", code=1)
                 run("--model", f"{provider}/org/model-1", "-p", "FAIL_ECHO", code=1)
                 run("--model", f"{provider}/org/model-1", "-p", "FAIL_STREAM_ECHO", code=1)
-            run("--model", "gcp.gemini/anything", "-p", "REJECT", code=1)
+            # The upgraded print front distinguishes invocation errors (2)
+            # from a model/tool failure after admission (1).
+            run("--model", "gcp.gemini/anything", "-p", "REJECT", code=2)
             assert server.records
             for path, body, headers in server.records:
                 assert body["model"] == "org/model-1"

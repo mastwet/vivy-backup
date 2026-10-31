@@ -304,6 +304,9 @@ fn coding_look_marks_the_state_and_keeps_every_upstream_row_and_cause() {
             lines.push(Line::from("read failed: permission denied"));
         }
         lines
+            .into_iter()
+            .map(rig_tui::LookLine::from)
+            .collect::<Vec<_>>()
     };
     let upstream = drawn(false);
     let view = ToolCallView::new(&call, Some(&result), CallState::Done);

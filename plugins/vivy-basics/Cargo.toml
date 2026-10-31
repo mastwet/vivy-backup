@@ -12,10 +12,10 @@ tui = ["dep:rig-tui", "rig-basics/tui"]
 
 [dependencies]
 # Must be the recipe's Rig revision: the agent holds one copy of each Rig crate.
-rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "e1cd47d57f0bccb50ddffd6f45de2ac3365b271c" }
+rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }
 # Rig's skills discovery, for the trust-aware skills plugin.
-rig-basics = { git = "https://github.com/0xPlaygrounds/rig", rev = "e1cd47d57f0bccb50ddffd6f45de2ac3365b271c", default-features = false }
-rig-tui = { git = "https://github.com/0xPlaygrounds/rig", rev = "e1cd47d57f0bccb50ddffd6f45de2ac3365b271c", optional = true, default-features = false }
+rig-basics = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776", default-features = false }
+rig-tui = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776", optional = true, default-features = false }
 # Named by the derives and the log macros; Rig's exact versions.
 bevy_ecs = { version = "=0.20.0", default-features = false, features = ["std"] }
 bevy_log = "=0.20.0"
@@ -30,5 +30,5 @@ vivy-process = { path = "../../crates/vivy-process" }
 
 [dev-dependencies]
 futures = "0.3"
-rig-core = { git = "https://github.com/0xPlaygrounds/rig", rev = "e1cd47d57f0bccb50ddffd6f45de2ac3365b271c", features = ["test-utils"] }
-rig-harness-test-support = { git = "https://github.com/0xPlaygrounds/rig", rev = "e1cd47d57f0bccb50ddffd6f45de2ac3365b271c" }
+rig-core = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776", features = ["test-utils"] }
+rig-harness-test-support = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }

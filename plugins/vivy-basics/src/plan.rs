@@ -72,6 +72,7 @@ impl Plugin for PlanPlugin {
                 prepare
                     .in_set(Stage::Prepare)
                     .in_set(PrepareSystems::Edit)
+                    .after(crate::context::replace_prompt)
                     .after(crate::subagents::SubagentSystems::Prepare),
             )
             .add_systems(
@@ -348,13 +349,15 @@ mod terminal {
         for (call, output) in batch.tools_mut("exit_plan_mode") {
             let view = call.view();
             let plan = view.argument("plan").unwrap_or_default();
-            let mut lines =
-                vec![view.header("Plan submission", plan.lines().next().unwrap_or_default())];
+            let mut lines = vec![
+                view.header("Plan submission", plan.lines().next().unwrap_or_default())
+                    .into(),
+            ];
             if call.result.is_some() {
                 lines.extend(
                     plan.lines()
                         .skip(1)
-                        .map(|line| rig_tui::ratatui::text::Line::from(line.to_owned())),
+                        .map(|line| rig_tui::ratatui::text::Line::from(line.to_owned()).into()),
                 );
             }
             lines.extend(view.result_lines());

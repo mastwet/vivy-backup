@@ -14,7 +14,7 @@ tui = []
 
 [dependencies]
 # Must be the recipe's Rig revision: the agent holds one copy of each Rig crate.
-rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "e1cd47d57f0bccb50ddffd6f45de2ac3365b271c" }
+rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }
 # Named by the Resource derive and the log macros; Rig's exact versions.
 bevy_ecs = { version = "=0.20.0", default-features = false, features = ["std"] }
 bevy_log = "=0.20.0"

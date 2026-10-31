@@ -561,7 +561,7 @@ fn interrupted_workflow_resume_does_not_relaunch_or_admit_queued_children() {
     let parent_resume = MockCompletionModel::from_stream_turns([reply("Restart explained.")]);
     let (mut app, wakes, parent) = resume(&fixture, &store, &parent_resume, &child);
     run_until(&mut app, &wakes, |world| {
-        parent_resume.request_count() >= 1 && world.get::<ActiveTurn>(parent).is_none()
+        world.get::<ActiveTurn>(parent).is_none()
     });
     for _ in 0..8 {
         app.update();
@@ -575,5 +575,13 @@ fn interrupted_workflow_resume_does_not_relaunch_or_admit_queued_children() {
         app.world().get::<Spawned>(parent).unwrap().iter().count(),
         4
     );
-    assert!(messages(&parent_resume).contains("interrupted"));
+    // Rig now stops restored turns unless a plugin explicitly opts in.
+    // Ordinary coding delegation must not silently send another model request.
+    assert_eq!(parent_resume.request_count(), 0);
+    let conversation = app.world().get::<Conversation>(parent).unwrap();
+    let restored = serde_json::to_string(&conversation.messages()).unwrap();
+    assert!(
+        restored.contains("interrupted") || restored.contains("stopped"),
+        "{restored}"
+    );
 }

@@ -13,7 +13,7 @@
 name: coding-agent
 rig:
   git: https://github.com/0xPlaygrounds/rig
-  rev: e1cd47d57f0bccb50ddffd6f45de2ac3365b271c
+  rev: fc556f982d501eea9d7167398a19386e4884e776
 components:
   - name: prompt
     crate: vivy-basics

@@ -204,7 +204,7 @@ type BuiltCalls = (Added<Admitted>, Or<(With<TurnCall>, With<SideCall>)>);
 
 /// Puts the replacing prompt in each model call built for an agent with no
 /// prompt of its own, after every plugin composed it.
-fn replace_prompt(
+pub(crate) fn replace_prompt(
     mut calls: Query<(&mut ModelRequest, &ForAgent), BuiltCalls>,
     own: Query<&SystemPrompt>,
     replaced: Res<ReplacedPrompt>,

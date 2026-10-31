@@ -2,11 +2,14 @@
 //! local shell/search/list calls, which have no upstream look of their own,
 //! keep the upstream renderers' output and diffs, and mark each call's state.
 use rig_harness::prelude::*;
+use rig_tui::highlight::{Code, Language};
 use rig_tui::ratatui::{
     style::{Color, Style, Stylize},
     text::{Line, Span},
 };
-use rig_tui::{AsideView, CallState, RenderBatch, RenderSystems, ToolCallView, TranscriptRender};
+use rig_tui::{
+    AsideView, CallState, LookLine, RenderBatch, RenderSystems, ToolCallView, TranscriptRender,
+};
 
 /// The calls our own look draws: the local wrappers, which the upstream
 /// renderers leave to the default.
@@ -34,7 +37,7 @@ fn look(mut batch: ResMut<RenderBatch>) {
 
 /// `drawn`, as the upstream look drew it, as one call shows: our own look for
 /// the local wrappers, and the state marker on the first row.
-pub(super) fn call_look(view: &ToolCallView<'_>, drawn: Vec<Line<'static>>) -> Vec<Line<'static>> {
+pub(super) fn call_look(view: &ToolCallView<'_>, drawn: Vec<LookLine>) -> Vec<LookLine> {
     let name = view.name();
     let mut lines = if OURS.contains(&name) {
         basic_tool(view)
@@ -54,48 +57,54 @@ pub(super) fn call_look(view: &ToolCallView<'_>, drawn: Vec<Line<'static>>) -> V
             }
         };
         // Keep every original span (including exit/timeout causes).
-        header.spans.insert(0, Span::styled(mark, style));
+        let mut marked = header.colored();
+        marked.spans.insert(0, Span::styled(mark, style));
+        *header = marked.into();
     }
     lines
 }
 
-fn basic_tool(view: &ToolCallView<'_>) -> Vec<Line<'static>> {
+fn basic_tool(view: &ToolCallView<'_>) -> Vec<LookLine> {
     let mut lines = match view.name() {
         "shell" => {
             let command = view.argument("command").unwrap_or_default();
-            let colored =
-                rig_tui::highlight::highlight(command, rig_tui::highlight::Language::Named("bash"))
-                    .unwrap_or_default();
+            let code = Code::new(command, Language::Named("bash"));
             let mut lines = Vec::new();
-            for (index, command) in command.lines().enumerate() {
-                let spans = colored
-                    .get(index)
-                    .cloned()
-                    .unwrap_or_else(|| vec![Span::from(command.replace('\t', "    "))]);
+            for index in 0..code.len() {
                 lines.push(if index == 0 {
-                    view.header_spans("$", spans)
+                    view.header_code("$", &code, index)
                 } else {
-                    Line::from([vec![Span::from("    ")], spans].concat())
+                    code.line(index, vec![Span::from("    ")])
                 });
             }
             if lines.is_empty() {
-                lines.push(view.header("$", ""));
+                lines.push(view.header("$", "").into());
             }
             lines
         }
-        "search" => vec![view.header("search", view.argument("pattern").unwrap_or_default())],
-        _ => vec![view.header("list", view.argument("path").unwrap_or("."))],
+        "search" => vec![
+            view.header("search", view.argument("pattern").unwrap_or_default())
+                .into(),
+        ],
+        _ => vec![
+            view.header("list", view.argument("path").unwrap_or("."))
+                .into(),
+        ],
     };
     lines.extend(view.result_lines());
     if view.result.is_none()
         && let Some(output) = view.output
     {
-        lines.extend(output.lines().map(|line| Line::from(format!("   {line}"))));
+        lines.extend(
+            output
+                .lines()
+                .map(|line| Line::from(format!("   {line}")).into()),
+        );
     }
     lines
 }
 
-pub(super) fn welcome(view: &AsideView<'_>, columns: u16) -> Vec<Line<'static>> {
+pub(super) fn welcome(view: &AsideView<'_>, columns: u16) -> Vec<LookLine> {
     let says: rig_basics::welcome::Welcome =
         serde_json::from_value(view.aside.value.clone()).unwrap_or_default();
     let width = usize::from(columns).saturating_sub(3).max(1);
@@ -115,7 +124,7 @@ pub(super) fn welcome(view: &AsideView<'_>, columns: u16) -> Vec<Line<'static>> 
         Line::default(),
     ]
     .into_iter()
-    .map(|line| line.bg(Color::Reset))
+    .map(|line| line.bg(Color::Reset).into())
     .collect()
 }
 
