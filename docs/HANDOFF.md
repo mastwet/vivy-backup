@@ -1,5 +1,23 @@
 # Handoff: continue the independent assembly experiment
 
+## AutoDream AD-2 selected (2026-10-31)
+
+The owner selects [AD-2: file snapshots and background validation](DESIGN.md#ad-2-file-snapshots-and-background-validation-owner-2026-10-31).
+Dream remains an independent context/task on the same Vivy core and chooses its
+own work. The host owns background validation jobs, cancellation and result
+delivery; admission is not successful validation. Automatically publish the
+tested code revision through the existing owner, retain a previous usable
+version and return later use/results as evolution evidence.
+
+Reuse the current workbench, process ownership and durable task path, adapting
+small Prime mechanisms. Separate code revisions from dependency environments;
+publication detection must include the Skill revision, and worker replacement
+resets transient Python state. Start with one validation job. The official inbox,
+general hooks, a Git artifact repository and another agent runtime are not needed.
+The existing durable-core Plan B and single-tool handoff/human stop decisions
+remain unchanged. Exact APIs, files and publication/recovery ordering still need
+engineering design; no implementation or runtime acceptance is delivered here.
+
 ## Executable Skill evolution required; Prime reuse audited (2026-10-31)
 
 The owner includes executable Skill generation, validation, automatic adoption

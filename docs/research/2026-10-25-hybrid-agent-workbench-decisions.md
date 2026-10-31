@@ -2500,6 +2500,11 @@ cheapest shared surface.
 
 ### Proposed minimal integration
 
+**Subsequent owner decision (2026-10-31):** select
+[AD-2, file snapshots with host-owned background validation](../DESIGN.md#ad-2-file-snapshots-and-background-validation-owner-2026-10-31).
+The authoritative decision records its alternatives and accepted boundaries;
+this source audit and probe remain evidence, not a delivered runtime.
+
 Keep a single Dream task in Vivy's existing durable execution path. Reuse the
 authoring convention, existing workbench and small Prime mechanisms as follows:
 

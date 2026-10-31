@@ -574,8 +574,9 @@ Task records retain the effective revision and failure reason. Persona rollback
 is a new checked revision, not history deletion. Mixed-backend adoptions are
 separate recorded operations, not an invented atomic update across all stores.
 
-The executable Skill integration proposal reuses Prime's package convention and
-the existing Vivy workbench discovery, preparation and loading path. Dream writes
+The owner selects [AD-2: file snapshots and background validation](#ad-2-file-snapshots-and-background-validation-owner-2026-10-31).
+It reuses Prime's package convention and the existing Vivy workbench discovery,
+preparation and loading path. Dream writes
 a candidate revision, runs relevant checks against that revision and requests
 automatic publication through the existing owner. Preserve the tested source
 revision, bind its validation receipt to it, and make later calls use that exact
@@ -588,8 +589,9 @@ Prime's command quality checks and refinement conflict/history mechanisms are
 useful donors, but its refinement rollback restores harness entries rather than
 Skill package files. Prefer small adaptations over importing pa-core's session
 engine or adding a second runtime. Validation failure leaves the active revision
-in place and returns the evidence to Dream. These are integration proposals,
-not an implemented publisher or proof of improved agent quality.
+in place and returns the evidence to Dream. AD-2 is the selected architecture;
+exact interfaces and recovery details remain design work. No implemented
+publisher or measured improvement in agent quality is claimed.
 
 #### 10. Compatibility, acceptance and remaining engineering choices
 
@@ -611,7 +613,7 @@ must preserve the task checkpoints and required active call pairs.
 | D1: control/failure | Inject append/sync/serialization errors, torn tail and corruption; cancel with late results; introduce new input between two requested tools; inspect valid tool-call/result pairing and worker cleanup |
 | D2: context and memory | Inspect actual model requests for persona revisions and Recap coverage; restart and recall written evidence; reconcile a repeated/incomplete memory write and a missing Python namespace |
 | D3: wake | Restart before/after a deadline, duplicate callback, replace/cancel deadline, wake while busy, silent outcome and exhausted budget |
-| D4: evolution | Evidence collected once; persona and executable Skill candidates validated; tested Skill revision automatically adopted and actually called by subsequent work; usage/results returned as new evidence; failed/stale publication preserves the active version; restart and code/persona rollback exercised |
+| D4: evolution | Evidence collected once; persona and executable Skill candidates validated; background validation admission distinguished from completion, with foreground handoff/cancellation exercised; tested Skill revision automatically adopted and actually called by subsequent work; usage/results returned as new evidence; failed/stale publication preserves the active version; restart and code/persona rollback exercised |
 
 D1-D3 form the first persistent-agent infrastructure loop. D4 closes the agreed
 learning/evolution loop. Use synthetic data and deterministic offline models
@@ -1024,11 +1026,12 @@ or revised scripts, must also close the validation-to-automatic-adoption-to-use
 feedback loop.** The owner requests reuse research into Prime Agent before
 implementation. This supersedes the proposed persona/text-only first acceptance.
 
-Artifact schemas, collection sources, trigger/cadence, validation and
-automatic-adoption criteria, effective-version boundaries, failure/retry handling
-and rollback remain detailed design work. Reusable lessons and context additions
-are other discussed outputs; separating original evidence from candidates and
-adoption results does not establish a finalized artifact catalog/storage contract.
+The AD-2 decision below selects the execution and version-management direction.
+Exact artifact schemas, collection coverage, trigger/cadence, behavioral checks,
+publication/recovery protocol and rollback implementation remain detailed design
+work. Reusable lessons and context additions are other discussed outputs;
+separating evidence from candidates and adoption results does not establish a
+finalized artifact catalog/storage contract.
 Automatic activation is the agreed behavior, not evidence that every generated
 candidate is valid or improves later task performance. Validation must fit the
 artifact without silently reintroducing mandatory per-candidate human approval.
@@ -1042,6 +1045,80 @@ to copy DIVA's approval platform, Prime's Factory or model-weight training.
 Status: design decision recorded; no AutoDream implementation or runtime
 acceptance is delivered. Recording it does not start durable implementation or
 close the owner-deferred real-provider workbench acceptance gate.
+
+### AD-2: file snapshots and background validation (owner, 2026-10-31)
+
+**Status: selected architecture; implementation and runtime acceptance pending.**
+The owner selects AD-2 from the AutoDream alternatives below. These identifiers
+apply only to evolution; the existing durable-core Plan B remains selected.
+
+| Alternative | Approach | Decision and tradeoff |
+| --- | --- | --- |
+| AD-1 | File snapshots with generation, validation and publication serialized within one Dream task. | Not selected: smallest initial execution addition, but a long validation occupies the current tool boundary until completion or cancellation. |
+| AD-2 | File snapshots with host-owned background validation jobs and automatic version publication. | Selected: keeps foreground interaction available while validation runs and reuses the existing task/workbench infrastructure. Requires job status, cancellation and result delivery. |
+| AD-3 | Git-backed Skill revisions and candidate workspaces with background validation. | Not selected: useful history/diffs for larger code assets, with additional repository/workspace management. Git does not replace validation, activation or feedback. |
+
+These are implementation/maintenance judgments, not measured cost or performance
+results. Plain revision directories are sufficient for the selected first case;
+an artifact Git repository is not a prerequisite.
+
+The selected responsibility split is:
+
+1. **Collection:** reuse execution records, user corrections and agent-marked
+   experiences. Preserve needed source excerpts before compaction, distinguish
+   observations from Dream's inferences and retain processing progress. Avoid a
+   model call solely for routine capture. The workspace is not a second memory
+   authority.
+2. **Dream:** run a recoverable task with its own Dream context on the same Vivy
+   core. Adapt Prime's authoring Skill and package conventions to the workbench.
+   Dream decides what to inspect, create, revise, test, abandon or leave unchanged;
+   the harness does not prescribe a fixed reasoning sequence or reviewer agent.
+3. **Validation:** the host owns the validation process and durable job identity,
+   using existing process/task mechanisms. Submission returns an admission/job
+   reference; only the recorded validation outcome can support publication.
+   Waiting on a job and cancelling it are distinct operations. Job lifetime must
+   not depend only on the submitting Python cell. Deliver results through the
+   existing internal task path; official inbox/general hooks are not prerequisites.
+   Start with one validation job at a time rather than a general worker pool.
+4. **Publication:** keep a candidate separate from active code, freeze the tested
+   revision and bind checks to that code and environment. Relevant function calls
+   and the original failure case, where available, provide evidence. Modifying a
+   candidate invalidates its previous validation result. Automatically adopt valid
+   candidates through Laputa, MemPalace or the Skill owner as appropriate. Recheck
+   the base revision, preserve the previous usable version and record each target's
+   result separately. Routine per-candidate human approval remains excluded.
+5. **Feedback:** attach the invoked Skill revision and observed outcome to existing
+   execution records, then collect later successes, failures and user corrections
+   as new evidence. Initially cover explicitly instrumented workbench calls;
+   complete attribution of arbitrary Python code is not assumed.
+
+Separate code revisions from dependency environments. Reuse a compatible prepared
+environment for source-only changes; prepare and check a new environment when
+dependencies change within the existing initialization authorization scope.
+Running calls retain their selected code; later calls adopt a new revision at a
+declared worker boundary. Publication detection must include the code revision,
+not only the Python executable path. A fresh worker loses transient variables;
+explicit artifacts and committed memory persist. Do not modify a published source
+snapshot in place or treat editable installation as immutable versioning.
+
+Keep evolution-specific records small: a candidate identifies evidence, target
+and base revision; a validation receipt identifies tested code/environment and
+results; an adoption receipt identifies old/new versions and publication status.
+Use the existing task-log storage direction and derive available Skills through
+the existing inventory, rather than introduce another database or capability list.
+
+Foreground handoff after one completed tool and explicit human immediate stop
+remain authoritative. Background execution does not mean uncontrolled or
+uninterruptible work. Recovery must preserve known outcomes and account for
+uncertain effects under the durable-core policy. Code rollback selects a prior
+revision; it does not undo already-performed external actions.
+
+The first coding-face acceptance covers generation of an executable fix,
+background validation, automatic activation of the tested version, a subsequent
+real invocation and outcome collection. Exercise cancellation, failed checks,
+stale publication, restart around publication and callable-version rollback.
+Exact API names, file layout, activation ordering and recovery records remain
+engineering design work. This decision adds no runtime dependency or product code.
 
 ## Automatic workbench preparation: agreed direction (2026-10-28)
 
