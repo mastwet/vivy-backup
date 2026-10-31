@@ -40,7 +40,7 @@ digests, not raw requests or credentials. Every event says `durable: false`.
 | Contract / experiment | Evidence and result at this pin |
 | --- | --- |
 | Hold before dispatch across repeated passes | Rust probe: 20 AgentPass runs do not start a tool before its checkpoint is appended. The next frame releases it; a quiet loop needs an explicit wake/release after Last. Supported for ordinary writes. |
-| Exact acknowledgement | Other-agent and stale-revision writes do not release a call. Changed arguments or generation require another saved revision. Injected append failure leaves the call held. Supported for the diagnostic gate. |
+| Exact acknowledgement | Other-agent and stale-revision writes do not release a call. Changed arguments, generation or routed provider/model identity require another saved revision, even when the completion payload is unchanged. Injected append failure leaves the call held. Supported for the diagnostic gate. |
 | State and conversation in one write | Probe observes both records in one agent-log append. This is not proof of atomic recovery of a partly written append or a transaction across logs. |
 | Real assembled coding path | Loopback gateway, one file read and two model requests: four gated starts (including input), exact observed checkpoints, no disk receipts. Trace size varies with frames. The checker rejects stale releases and duplicate dispatch. |
 | Final result boundary | Review digest differs from Settled digest after kernel secret redaction. The trace observes settlement without a result commit gate. Capturing Review is insufficient; observing Settled is too late to prevent continuation. Gap. |
@@ -63,14 +63,25 @@ python -m unittest discover -s scripts -p test_durable_probe.py
 python scripts/durable_probe.py C:/vtd0/debug/vivy.exe
 ```
 
-The probe script runs 11 offline Rust characterizations, derives and builds a
+The probe script runs 12 offline Rust characterizations, derives and builds a
 temporary recipe, checks the baseline dependency graph, and writes
 `.workspace/d0/report.json`, `coding-trace.json`, `coding.stderr` and
 `rust-probes.log`. **Exit 2 means the known persistence gaps were reproduced**;
 an unexpected assertion/build/process failure is an error, not a passed D0 gate.
 Reports begin as `running` so an aborted invocation cannot reuse an old conclusion.
-The four Python checker tests are also offline. Logs, synthetic homes and traces
+The five Python checker/environment tests are also offline. Logs, synthetic homes and traces
 are not committed. Cargo may fetch pinned dependencies; no external model is used.
+
+Every subprocess uses an environment stripped of inherited Rig control and secret
+variables. The assembled run injects poisoned launcher variables pointing to an
+owned sentinel directory outside its fixture and verifies those files stay
+unchanged and notices do not reach the model. Independent review found and led to
+fixes for this environment isolation and the missing routed-model fingerprint;
+both regressions were reproduced before fixing them. Model fingerprints include
+the public provider/model identity and adapted payload. An opaque handler can
+still change endpoint/credential behavior under the same identity; this probe
+does not attest to that change. Production freezing needs a host-owned transport
+configuration revision, without serializing credential values.
 
 ### Proposed changes and ownership
 

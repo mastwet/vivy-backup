@@ -21,12 +21,18 @@ Verification on Windows, MSVC, isolated `C:/vtd0` target (debug symbols disabled
 | Check | Observed result |
 | --- | --- |
 | Root workspace / basics all features / gateway / Python Rust tests | 22 / 82 / 33 / 20 passed |
-| D0 Rust characterizations / Python trace-checker tests | 11 / 4 passed |
+| D0 Rust characterizations / Python checker/environment tests | 12 / 5 passed |
 | Baseline coding recipe | Built; final incremental rebuild 5.89 s, not a cold-build comparison |
 | Coding / provider / subagent loopback smoke | Passed; two provider wire families, unchanged model IDs, tools, failures and sessions |
 | Native terminal smoke | Passed at 50x20: Plan UI, markdown, tool failure and cancellation |
 | Python workbench lifecycle | 20 cycles, zero orphans; cold median 1.186 s, warm 0.082 s, maximum close 0.322 s in this fixture |
 | D0 coding and entry paths | Four gated starts; unsupported Rig format refused unchanged; launcher lease enforced; required-state and direct-entry gaps reproduced |
+| Compile selection | Headless delegation and no-subagent recipe smoke passed; disabled probe feature checked |
+
+Independent review identified inherited Rig environment contamination and an
+omitted routed-model identity in the diagnostic fingerprint. Both received
+failing regressions, fixes and focused suite/assembled-path reruns. Same-identity
+opaque endpoint changes remain explicitly outside the probe's guarantee.
 
 The lifecycle fixture is not a rerun of all native MemPalace integration tests.
 These are synthetic/offline model tests, not real-provider or power-loss evidence.

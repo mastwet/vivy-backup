@@ -1,6 +1,7 @@
 # D0 implementation: Rig upgrade and persistence seam probes
 
-Status: implemented; final review pending. D0 persistence gate: blocked by
+Status: implemented and independently reviewed; findings fixed with regressions.
+D0 persistence gate: blocked by
 reproduced gaps. Spec: [architecture baseline](../DESIGN.md#preliminary-detailed-architecture-baseline-2026-10-31).
 
 The owner chose to upgrade first to the inspected Rig commit

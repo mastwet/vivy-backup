@@ -115,6 +115,52 @@ fn changed_arguments_or_generation_require_a_new_append() {
     }
 }
 
+#[test]
+fn model_rerouting_requires_a_new_checkpoint_even_when_payload_is_unchanged() {
+    let (mut app, agent) = setup();
+    let original = MockCompletionModel::from_stream_turns([reply("original")]);
+    let replacement = MockCompletionModel::from_stream_turns([reply("replacement")]);
+    app.world_mut()
+        .entity_mut(agent)
+        .insert(connect(&original).unwrap());
+    app.world_mut()
+        .get_mut::<Conversation>(agent)
+        .unwrap()
+        .push(rig_core::completion::Message::user("synthetic route check"));
+    let call = app.world_mut().spawn(SideCall(agent)).id();
+    app.world_mut().run_schedule(AgentPass);
+    let cp = app.world().get::<ProbeState>(agent).unwrap().operations[0].clone();
+    let payload = app
+        .world()
+        .get::<Adapted>(call)
+        .unwrap()
+        .sent(app.world().get::<ModelRequest>(call).unwrap());
+    app.update(); // Original route's checkpoint appended; dispatch still held.
+    let mut connection = connect(&replacement).unwrap();
+    Arc::make_mut(&mut connection.spec).id = "rerouted-model".into();
+    let adapted = Adapted(connection);
+    assert_eq!(
+        digest(&payload).unwrap(),
+        digest(&adapted.sent(app.world().get::<ModelRequest>(call).unwrap())).unwrap()
+    );
+    app.world_mut().entity_mut(call).insert(adapted);
+    app.world_mut().run_schedule(First);
+    app.world_mut().run_schedule(AgentPass);
+    assert!(
+        !app.world().entity(call).contains::<Started>(),
+        "the original model's acknowledgement released a different route"
+    );
+    assert!(app.world().get::<ProbeState>(agent).unwrap().revision > cp.revision);
+    pump(&mut app, |world| world.get::<Settled>(call).is_some());
+    assert_eq!(
+        replacement.request_count(),
+        1,
+        "{:?}",
+        app.world().get::<Outcome>(call)
+    );
+    assert_eq!(original.request_count(), 0);
+}
+
 #[derive(Clone, Default)]
 struct FallibleStore {
     inner: MemoryStore,
@@ -339,7 +385,10 @@ fn pump(app: &mut App, done: impl Fn(&mut World) -> bool) {
         }
         std::thread::sleep(std::time::Duration::from_millis(1));
     }
-    panic!("probe deadline exceeded; trace: {:?}", trace(app));
+    panic!(
+        "probe deadline exceeded; trace tail: {:?}",
+        trace(app).into_iter().rev().take(20).collect::<Vec<_>>()
+    );
 }
 
 fn model_app(

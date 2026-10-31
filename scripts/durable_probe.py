@@ -18,6 +18,12 @@ from mock_gateway import Handler, text_of
 from subagents_optional import variant, ROOT
 
 
+def probe_environment(environment):
+    """Keep toolchain settings, discard enclosing Rig process control/secrets."""
+    return {k: v for k, v in environment.items()
+            if not k.upper().startswith("RIG_") and k.upper() != "VIVY_D0_TRACE"}
+
+
 class Gateway(Handler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["content-length"])))
@@ -73,8 +79,7 @@ def entry_paths(builder, binary, root, home, server):
     """Characterize launch/resume with disposable copies, never production data."""
     baseline = Path(os.environ["CARGO_TARGET_DIR"]) / "debug" / (
         "coding-agent.exe" if os.name == "nt" else "coding-agent")
-    env = {k: v for k, v in os.environ.items()
-           if k not in {"RIG_SESSION", "RIG_RUN", "RIG_START", "RIG_LAUNCHER", "VIVY_D0_TRACE"}}
+    env = probe_environment(os.environ)
     env.update(RIG_HOME=str(home), RIG_SECRET_GATEWAY="synthetic-d0")
     source = next((home / "sessions").iterdir())
     (source / "directory").write_text(str(root), encoding="utf-8")
@@ -165,6 +170,7 @@ def entry_paths(builder, binary, root, home, server):
 
 def main():
     builder = str(Path(sys.argv[1]).resolve())
+    environment = probe_environment(os.environ)
     output = ROOT / ".workspace/d0"
     output.mkdir(parents=True, exist_ok=True)
     # Do not leave a previous run's conclusion looking like current evidence.
@@ -173,7 +179,7 @@ def main():
         subprocess.run(["cargo", "test", "--manifest-path",
                         str(ROOT / "plugins/vivy-durable/Cargo.toml"),
                         "--features", "d0-probe", "--locked"],
-                       check=True, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+                       check=True, cwd=ROOT, env=environment, stdout=log, stderr=subprocess.STDOUT)
     extra = f"""
   - name: d0-probe
     crate: vivy-durable
@@ -185,10 +191,10 @@ def main():
 """
     binary = variant(builder, "d0-durable-probe",
                      ["python", "subagents", "branch-summary", "session-commands"],
-                     extra=extra)
+                     extra=extra, env=environment)
     graph = subprocess.check_output(["cargo", "tree", "--manifest-path",
         str(ROOT / ".generated/coding-agent/Cargo.toml"), "--locked", "-e", "normal"],
-        text=True, encoding="utf-8", cwd=ROOT)
+        text=True, encoding="utf-8", cwd=ROOT, env=environment)
     assert "vivy-durable" not in graph, "legacy recipe compiled the experimental plugin"
     server = ThreadingHTTPServer(("127.0.0.1", 0), Gateway)
     server.records = []
@@ -196,7 +202,8 @@ def main():
     server.release = threading.Event()
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
-        with tempfile.TemporaryDirectory(prefix="vivy-d0-") as temporary:
+        with (tempfile.TemporaryDirectory(prefix="vivy-d0-") as temporary,
+              tempfile.TemporaryDirectory(prefix="vivy-d0-sentinel-") as sentinel):
             root = Path(temporary)
             home = root / "home"
             home.mkdir()
@@ -205,13 +212,23 @@ def main():
                 f'[gateway]\nbase_url = "http://127.0.0.1:{server.server_port}/v1"\n'
                 'model = "d0/model"\n[trust]\ndefault = "never"\n', encoding="utf-8")
             path = root / "trace.jsonl"
+            outside = Path(sentinel)
+            (outside / "description").write_text("unchanged sentinel", encoding="utf-8")
+            before = {p.name: p.read_bytes() for p in outside.iterdir()}
+            poisoned = dict(os.environ, RIG_RUN=str(outside), RIG_SESSION="1793440000-9999",
+                RIG_START="resumed", RIG_NOTICE="OUTSIDE_NOTICE", RIG_BUILD_FAILURE="OUTSIDE_BUILD",
+                RIG_PROCESS_LEDGER=str(outside / "groups"), RIG_DESCRIBE=str(outside / "description"),
+                RIG_LAUNCHER=str(outside / "launcher"))
             result = subprocess.run([str(binary), "-p", "Read sample.txt"],
-                cwd=root, env=dict(os.environ, RIG_HOME=str(home),
+                cwd=root, env=dict(probe_environment(poisoned), RIG_HOME=str(home),
                     RIG_SECRET_GATEWAY="synthetic-d0", VIVY_D0_TRACE=str(path)),
                 text=True, encoding="utf-8", capture_output=True, timeout=45)
+            assert before == {p.name: p.read_bytes() for p in outside.iterdir()}, "inherited Rig state escaped fixture"
             assert result.returncode == 0 and "D0_TASK_DONE" in result.stdout, (
                 result.returncode, result.stdout, result.stderr)
             assert len(server.records) == 2, len(server.records)
+            assert not any("OUTSIDE_BUILD" in json.dumps(record) or "OUTSIDE_NOTICE" in json.dumps(record)
+                           for record in server.records), "inherited launcher input contaminated task"
             events = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
             stats = analyze(events)
             assert "on the whole world" not in result.stderr, result.stderr
@@ -224,23 +241,25 @@ def main():
             "meaning": "D0 investigation ran; persistence acceptance has not passed.",
             "coding_path": stats,
             "entry_paths": entries,
+            "fixture_isolation": "inherited Rig controls stripped; outside sentinels unchanged",
             "supported": ["multi-pass holds", "exact observed-write matching",
-                          "request/generation invalidation", "native stop and CarryOn opt-in"],
+                          "request/route/generation invalidation", "native stop and CarryOn opt-in"],
             "gaps": [
                 {"id": "sync", "evidence": "source inspection at the pinned revision",
                  "finding": "DirStore append uses write_all without sync; no disk receipt was exercised."},
                 {"id": "result", "evidence": "Rust characterization and coding trace",
                  "finding": "Review precedes final redaction; settlement is not guarded by a committed result."},
-                {"id": "required-state", "evidence": "Rust characterization",
+                {"id": "required-state", "evidence": "Rust characterization and assembled entry checks",
                  "finding": "Invalid or unregistered required state does not refuse the session."},
                 {"id": "serialization", "evidence": "Rust characterization",
                  "finding": "A failed saved component can be omitted while the other log write succeeds."},
-                {"id": "ownership", "evidence": "Rust characterization",
+                {"id": "ownership", "evidence": "Rust characterization and actual launcher/species processes",
                  "finding": "Launcher lease works; direct species execution with RIG_SESSION bypasses ownership."},
             ],
             "unverified": ["power-loss durability", "full D1 crash matrix",
                            "real provider", "production cancellation generations",
-                           "saved model-result reinjection"],
+                           "saved model-result reinjection",
+                           "opaque endpoint changes under the same provider/model identity"],
         }
         (output / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(json.dumps(report, indent=2), flush=True)

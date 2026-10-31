@@ -2,7 +2,7 @@
 import copy
 import unittest
 
-from durable_probe import analyze
+from durable_probe import analyze, probe_environment
 
 
 def fixture():
@@ -22,6 +22,16 @@ def fixture():
 
 
 class EvidenceTest(unittest.TestCase):
+    def test_inherited_rig_protocol_and_probe_variables_are_removed(self):
+        original = {name: "outside-fixture" for name in [
+            "RIG_HOME", "RIG_SESSION", "RIG_RUN", "RIG_START", "RIG_LAUNCHER",
+            "RIG_NOTICE", "RIG_BUILD_FAILURE", "RIG_PROCESS_LEDGER", "RIG_DESCRIBE",
+            "RIG_SOURCE", "RIG_SECRET_GATEWAY", "VIVY_D0_TRACE", "rig_run"]}
+        original.update(PATH="toolchain", CARGO_TARGET_DIR="cache")
+        expected = {"PATH": "toolchain", "CARGO_TARGET_DIR": "cache"}
+        self.assertEqual(probe_environment(original), expected)
+        self.assertIn("RIG_RUN", original)
+
     def test_complete_sequence(self):
         self.assertEqual(analyze(fixture())["observed_starts"], 3)
 

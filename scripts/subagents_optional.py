@@ -18,7 +18,7 @@ from mock_gateway import Handler
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
-def variant(builder, name, excluded, extra=""):
+def variant(builder, name, excluded, extra="", env=None):
     original = (ROOT / "recipes/coding-agent.yaml").read_text(encoding="utf-8")
     header, components = original.split("components:\n", 1)
     header = re.sub(r"(?m)^name: coding-agent$", "name: " + name, header)
@@ -31,7 +31,7 @@ def variant(builder, name, excluded, extra=""):
     recipe = directory / (name + ".yaml")
     recipe.write_text(text, encoding="utf-8")
     recipe.with_suffix(".Cargo.lock").write_bytes((ROOT / "recipes/coding-agent.Cargo.lock").read_bytes())
-    subprocess.run([builder, "build", str(recipe)], check=True, cwd=ROOT)
+    subprocess.run([builder, "build", str(recipe)], check=True, cwd=ROOT, env=env)
     binary = pathlib.Path(os.environ["CARGO_TARGET_DIR"]) / "debug" / (name + (".exe" if os.name == "nt" else ""))
     return binary
 

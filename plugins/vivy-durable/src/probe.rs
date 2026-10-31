@@ -172,7 +172,17 @@ fn gate(world: &mut World) {
             let (kind, digest) = if let Some(tool) = tool {
                 ("tool", digest(&tool.call))
             } else if let (Some(model), Some(adapted)) = (model, adapted) {
-                ("model", digest(&adapted.sent(model)))
+                // The payload's model override is usually None; routing lives
+                // in the connection. This binds the public catalog identity,
+                // not the opaque handler's endpoint or credential revision.
+                (
+                    "model",
+                    digest(&(
+                        &adapted.0.spec.provider,
+                        &adapted.0.spec.id,
+                        adapted.sent(model),
+                    )),
+                )
             } else if let Some(input) = input {
                 ("input", digest(input))
             } else {
