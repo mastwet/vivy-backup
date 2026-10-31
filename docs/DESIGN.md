@@ -1,5 +1,28 @@
 # Decisions and assembly direction
 
+## Assistant context clarification (2026-10-31)
+
+The owner questioned treating retrieved evidence as part of the requested
+mysoul-style context. Use Recap-only for the assistant's cross-turn history:
+persona/host instructions, the committed Recap and the current input/task form
+the new turn's context. Do not append an old raw-chat window, pending summary
+sources or automatically retrieved memory. The earlier synthesis's recent-tail
+default was an engineering suggestion, not a mysoul requirement; it is superseded.
+
+An active task retains its own execution context and unresolved tool-call/result
+pairs. Optional memory tools remain separate capabilities: only an explicit agent
+tool call adds their results to that activity. Recap-only works with recall disabled
+or unavailable. It does not require another memory engine or an automatic retrieval
+stage. Rust owns this policy over Rig's summary/storage primitives; ordinary coding
+sessions retain their existing context policy.
+
+This corrects the D2 design, not delivered runtime behavior. Acceptance must inspect
+actual model inputs: a new turn excludes prior completed-turn raw-chat markers
+and unused recall results;
+continuing activities retain needed tool results; failed Recap publication leaves
+the prior version and pending sources intact without injecting those sources.
+The D0/D1 persistence work and the existing Rig fork patch remain applicable.
+
 ## D0 implementation checkpoint (2026-10-31)
 
 The subsequent owner authorization permits bounded patches in the `mastwet/rig`
@@ -58,7 +81,7 @@ adding equivalents, and defer infrastructure without a concrete first consumer.
 | Durability | Persist admissions, intents, outcomes and continuation state; unsafe uncertain effects are reconciled, not blindly replayed. | Rig primitives and bounded upstream fixes first; a private framed Store is conditional on D0 evidence. |
 | Agent control | Agent chooses continue/switch/defer/ask/silence; ordinary handoff follows one completed tool, human immediate stop remains available. | One foreground decision and serialized tools per agent; no general durable child joins yet. |
 | Persona | Laputa is the specification/governance boundary; one native workspace persona authority feeds the top-level persona block. | Small Rust integration; no Garden service or second identity store. |
-| Context | Rust/Rig owns effective context, Recap coverage/publication and compaction. | Existing coding policy; compact policy starts with committed Recap plus a bounded unsummarized tail and active task. |
+| Context | Rust/Rig owns effective context, Recap coverage/publication and compaction. | Existing coding policy; assistant cross-turn history is committed Recap only, with current input and activity context. No automatic retrieval or raw-chat tail. |
 | Long-term memory | Full Python-native MemPalace remains authoritative, behind a replaceable consumer boundary. | Reuse remember/get/search and stable source/event identities; no new backend or mirrored memory database. |
 | Waiting | Saved one-shot deadlines; a live host delivers wakes; generic idle autonomy defaults off. | Explicitly admitted work may continue or schedule a wake; no daemon or general cron requirement. |
 | Evolution | AutoDream AD-2: separate Dream context, file revisions, host-owned background validation and automatic adoption. | Persona and executable Skill adoption, actual subsequent use and feedback; no mandatory reviewer or per-candidate approval. |
@@ -67,9 +90,10 @@ adding equivalents, and defer infrastructure without a concrete first consumer.
 | Delegation | Existing native Rig delegation remains the baseline; APIX/apixis may later provide optional library-level composition. | No second agent runtime, compulsory cross-language Rig bridge or durable graph engine. |
 | Product and later features | Product navigation/Diva packaging remain parked; official inbox/general hooks remain later-phase. | Neither is a prerequisite for internal task completion, wake delivery or AutoDream. |
 
-The compact-context default, local publication protocol and first job limits
-below are engineering choices made in this synthesis, not additional historical
-owner rulings. They can be refined by measured implementation evidence without
+The original compact-context suggestion is superseded by the assistant context
+clarification above. The local publication protocol and first job limits below
+are engineering choices made in this synthesis, not additional historical owner
+rulings. They can be refined by measured implementation evidence without
 reopening the selected ownership or execution model. Exact API spelling, type
 names, numeric bounds and directory names are implementation details; changes
 to authority, replay guarantees, automatic adoption or agent freedom are not.
@@ -227,7 +251,7 @@ content preparation. Mysoul remains the behavioral reference.
 | --- | --- |
 | Context composition, budgets and tool-call/result pairing | Rust / Rig, reusing existing conversation and compaction mechanisms |
 | Effective Recap, source coverage and publication/recovery | Rust, preferring Rig's existing saved-state and conversation facilities |
-| Summary content, update triggers and recent-message retention | Small Vivy policy extensions over Rig; no second execution loop |
+| Summary content, update triggers and current-activity context | Small Vivy policy extensions over Rig; assistant new turns use Recap-only history, with no second execution loop |
 | Long-term memory search/write, source cleaning and batch organization | Existing Python workbench / MemPalace |
 | Optional complex experience analysis and AutoDream material preparation | Python where useful; adopted state still passes through its authoritative owner |
 
@@ -247,10 +271,11 @@ not by itself establish a persistent subject's Recap policy, cross-session
 continuity or the stronger durable commit guarantees required above. Begin by
 adapting summary prompts and retention policy, then add the necessary assistant
 update triggers and source/publication checks in the same execution chain.
-The synthesis below selects a bounded not-yet-summarized conversation tail for
-the initial compact policy. Numeric retention/trigger settings remain builder
-choices. Cross-session subject projection is deferred rather than implied by a
-shared persona or workspace.
+The clarified assistant policy uses Recap-only history at a new turn, without a
+default raw-chat tail or automatic memory search. Current activity context remains
+available to its executor. Numeric summary budgets and trigger settings remain
+builder choices. Cross-session subject projection is deferred rather than implied
+by a shared persona or workspace.
 
 Do not outsource the complete context authority to Python or introduce a
 parallel Recap database. If a demonstrated need calls for Python-generated
@@ -650,26 +675,29 @@ evidence references, reusing Rig facilities rather than creating a parallel stor
 Update it only against the
 expected source boundary; discard/recompute a stale candidate. Preserve current
 tool-call/result pairs until closed. Keep the existing coding context/compaction
-policy as the initial policy. The mysoul-inspired compact policy can later use
-persona + committed Recap + active task + bounded selected evidence. These
-policies share an execution engine and must not create two Recap authorities.
+policy for coding sessions. The assistant's new turn uses persona/instructions,
+committed Recap and current input/task; old raw messages and pending summary
+sources are not automatically included. A continuing activity retains its own
+execution context, which is not reused as another conversation turn's history.
+These policies share an execution engine and must not create two Recap authorities.
 
-Engineering default for the first compact policy: keep committed Recap plus a
-bounded, chronological unsummarized tail, active task and explicitly selected
-evidence. This retains source detail cheaply while reusing Rig's pair-aware cuts;
-Recap-only is not a prerequisite. Reuse context-pressure/manual compaction and
-consider a checkpoint refresh at durable completion/wait when uncovered material
-warrants it. Coalesce requests against one source boundary. If refresh fails, retain
-the old Recap and its uncovered tail; never advance coverage or discard evidence
-because a summary was merely requested. If the resulting request still exceeds
-budget, suspend it with a cause. A committed coding outcome need not be undone
-by a failed maintenance summary. There is no separate summary model call on
-every timer event or tool result.
+The first assistant policy follows mysoul's Recap-only history. Reuse Rig's summary
+facilities with assistant-specific content and publication rules, rather than
+equating Rig's default window compaction with that policy. Consider a Recap refresh
+at completion/wait when uncovered material warrants it and coalesce requests
+against one source boundary. If refresh fails, retain the old Recap and pending
+sources for retry; never advance coverage or discard sources because a summary
+was merely requested. Do not silently inject those sources as a raw-history
+fallback. If required current context exceeds budget, suspend with a cause.
+A committed coding outcome need not be undone by a failed maintenance summary.
+There is no separate summary model call on every timer event or tool result.
 
-Keep MemPalace's existing `remember/get/search` API. Start with explicit bounded
-recall and explicit useful memory writes; neither every token nor every turn
-requires retrieval. A typed workbench memory operation may wrap the existing
-facade when recovery needs stable arguments; arbitrary Python cells remain
+Keep MemPalace's existing `remember/get/search` API as an independent optional
+capability. An explicit agent tool call may read memory and add a bounded result to
+its current activity; it is not a mandatory context layer or a search at every
+turn. Recap-only must also work without memory retrieval. Explicit useful memory
+writes retain their own ingestion policy. A typed workbench memory operation may
+wrap the existing facade when recovery needs stable arguments; arbitrary Python cells remain
 unsafe to replay. Use stable workspace/source and task/event keys for writes,
 and reconcile with `get(source_id, event_id)` after interruption. Same-key
 different-content conflicts and incomplete chunk records require resolution;

@@ -398,9 +398,13 @@ Rust implementation. No upstream or Vivy runtime tests were run for this review.
 The owner confirmed "myllm" means mysoul. The Desktop mysoul checkout is now at
 `3a7cbde7`, newer than the previously referenced worktree. Its
 `src/mysoul/service.py`, `laputa.py`, integration tests, runbook and validation
-records support persona plus committed Recap, current input/activity state,
-explicit bounded recall, and subject-scheduled wakeups as design inputs. This
-inspection did not rerun those integrations. Existing real-provider wake-tool
+records support persona plus committed Recap and current input/activity state.
+The inspected new-turn composer does not search memory and sets recall status to
+`not_requested`; its optional memory tools only run after an explicit agent call.
+Those tools and subject-scheduled wakeups are separate reference capabilities,
+not required parts of Recap-only. See the later
+[assistant context clarification](../DESIGN.md#assistant-context-clarification-2026-10-31).
+This inspection did not rerun those integrations. Existing real-provider wake-tool
 validation records include gateway failures; the owner's basic-loop evidence
 does not establish every integration or the new Rust recovery contract.
 

@@ -1,5 +1,20 @@
 # Handoff: continue the independent assembly experiment
 
+## Assistant context clarification (2026-10-31)
+
+The owner's question distinguishes mysoul's Recap-only history from its optional
+memory-reading tools. The assistant policy is persona/instructions + committed
+Recap + current input/task, with no automatically included old raw-chat tail or
+retrieved evidence. The earlier recent-tail suggestion is superseded. An active
+task still retains its execution context and unresolved tool-call/result pairs.
+Memory reads remain separate optional tool calls; recap must work without them.
+
+[DESIGN](DESIGN.md#assistant-context-clarification-2026-10-31) records the corrected
+boundary and D2 acceptance. Rust still owns the effective context and reuses Rig's
+summary/storage primitives; ordinary coding compaction is unchanged. This is a
+documentation correction, not a completed Recap integration. Continue D0/D1
+storage work, then implement and inspect the assistant's actual model inputs in D2.
+
 ## Rig fork: saved serialization failure (2026-10-31)
 
 The owner authorizes modifying `mastwet/rig` for the missing D0 seams. The editable
@@ -162,8 +177,9 @@ blanket added-Skill prompt must not become per-candidate approval. Unadmitted
 dependency/source changes still use existing setup, without blocking all Dream work.
 Actual loaded Skill revision/results return to collection.
 
-The compact-context default is Recap plus a bounded unsummarized tail, separate
-per agent; no shared cross-session Recap. Reuse current coding compaction first.
+The assistant context clarification above supersedes the synthesis's recent-tail
+suggestion: use Recap-only cross-turn history, separate per agent, and no automatic
+retrieval. Reuse Rig primitives and retain ordinary coding compaction.
 PEN/NeuroLink positioning and selected official QQ/NapCat/Minecraft roles remain
 locked, while package/wire details and the game backend remain integration work.
 Minecraft can use proven execution/job seams without waiting for all of D4.
@@ -273,10 +289,10 @@ summary engine or outsource context authority to Python.
 Keep MemPalace and optional source/experience preparation in the Python
 workbench. A future Python summary candidate must be checked and adopted by
 Rust; no new bridge or parallel Recap database is required now. Laputa and
-AutoDream ownership remain as previously accepted. Exact trigger/retention
-settings, Recap-only versus a bounded unsummarized tail, and cross-session
-subject projection remain open. This is a documentation decision backed by
-source inspection, with no implementation, dependency upgrade or new runtime
+AutoDream ownership remain as previously accepted. Exact summary trigger/budget
+settings and cross-session subject projection remain open; the later clarification
+selects Recap-only history for assistant new turns. This is a documentation decision
+backed by source inspection, with no implementation, dependency upgrade or new runtime
 verification. The detailed proposal below remains subject to this decision.
 
 ## Rig reuse and upstream contribution assessment (2026-10-31)
