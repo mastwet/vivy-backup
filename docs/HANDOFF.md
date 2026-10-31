@@ -1,5 +1,21 @@
 # Handoff: continue the independent assembly experiment
 
+## Requirements audit: five rulings pending (2026-10-31)
+
+The owner requested a check for other assumptions like the Recap/recall conflation.
+Read the [requirements audit](DESIGN.md#requirements-audit-and-proposed-rulings-2026-10-31).
+It corrects residual mandatory-recall wording, the historical compulsory
+Python/APIX-to-Rig bridge and unqualified external-event handoff wording against
+already explicit requirements. No runtime code changed.
+
+Five recommendations remain pending owner review: initial process-crash versus
+synced durability, Recap freshness versus asynchronous publication, first-slice
+delegation/concurrency scope, explicit resource-limit policy, and owner/outsider
+context sharing. Do not record these as accepted decisions or relax the D0 gate
+because of this audit. Existing Rig patches and evidence remain applicable; even
+a process-crash-only target still needs complete checkpoint/result ordering and
+required-state validation. Source inspection is not another runtime test.
+
 ## Assistant context clarification (2026-10-31)
 
 The owner's question distinguishes mysoul's Recap-only history from its optional

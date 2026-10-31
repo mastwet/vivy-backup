@@ -1,5 +1,119 @@
 # Decisions and assembly direction
 
+## Requirements audit and proposed rulings (2026-10-31)
+
+**Status: audit delivered; the five rulings below are recommendations, not new
+owner decisions.** The owner requested a check for assumptions similar to the
+recent Recap/recall conflation. This audit compares the explicit discussion with
+the current baseline, D0 plan, selected code paths and local reference sources.
+An approved high-level direction does not make every synthesis default an
+independently requested behavior. Unimplemented capability is not itself a
+contradiction. No runtime or acceptance gate changes with this audit.
+
+Three textual corrections follow already explicit requirements:
+
+- Recap-only acceptance must work without memory retrieval. The D2 memory-backend
+  checks are separate enabled-capability checks, not a mandatory recall stage.
+  Reference capabilities such as mysoul's memory tools are not required merely
+  because the reference includes them.
+- APIX/apixis is an optional library-level composition direction. The older
+  Python-to-Rig bridge paragraph is historical, not a selected integration
+  prerequisite. Prefer the native APIX suite where suitable; exact library and
+  interoperability boundaries still need their own design.
+- An external event is not automatically a request to hand off. Only enabled
+  notifications/explicit task inputs enter that path; ignored groups and
+  hook-disabled items remain filtered or available through their source and,
+  later, the inbox. The agent controls subscriptions; NeuroLink transports events.
+
+### Choices requiring explicit review
+
+1. **Initial durability level.** The [storage contract](#3-storage-and-the-actual-commit-unit)
+   makes synced commits mandatory. This is stronger than Pi durable's default
+   process-crash contract at local revision `a14cdf90`: its README's backend table
+   describes SQLite WAL with `synchronous=NORMAL`, and `docs/spec.md`'s JSONL
+   section defaults `fsync` to false. Even its optional JSONL sync is not a
+   blanket guarantee that every acknowledged tail commit survives power loss.
+   Choose **A (recommended): ordinary process-crash recovery for the initial
+   acceptance**, with explicit limits for OS/power/filesystem failure and stronger
+   sync as a later opt-in; or B: retain the current synced-commit gate now.
+   A changes a previously synthesized guarantee and therefore needs an owner
+   ruling. It does not remove complete recoverable checkpoints, final-result
+   gating, required-state validation, writer ownership or uncertain-effect
+   handling. Ordinary Rig appends have not proved even that complete contract.
+   Keep the existing D0 evidence and failed-gate status until a revised contract
+   is approved and independently exercised; no instant unblock is implied.
+
+2. **Recap freshness between new turns.** The [context policy](#7-persona-recap-and-memory-integration)
+   uses only committed Recap but leaves the update trigger conditional. A new
+   turn can consequently omit recently completed dialogue while synthesis is
+   pending. Mysoul `3a7cbde7` permits this: `test_recap_only_context.py` retains
+   pending sources without adding them to a new turn; `cognition.py::run_due`
+   publishes later, separately from owner turns. Choose **A (recommended for
+   reference fidelity): asynchronous updates with potentially lagging committed
+   Recap**, explicit pending/failed coverage and no raw-history fallback; or B:
+   require coverage through the previous completed turn before a new independent
+   answer, accepting summary latency/cost and a summary-failure wait. Neither
+   choice changes the active task's tool context or enables automatic recall.
+   Recap maintenance must remain runnable without AutoDream or global idle
+   autonomy; sharing their implementation is not a prerequisite.
+
+3. **First durable delegation and concurrency scope.** The [initial control surface](#2-identity-state-and-the-minimum-control-surface)
+   serializes one agent's tools and refuses unsupported durable delegation.
+   The current coding recipe already has native delegation/parallel workflows;
+   the first durable slice would therefore have less capability in this area.
+   A single-tool handoff requirement does not inherently require permanent
+   serialization. Choose **A (recommended): retain these limits only for the
+   single-agent D1 recovery acceptance**, explicitly defer recoverable child
+   joins and retain the ordinary coding recipe; or B: include a minimal native
+   parent/child recovery case in the first durable acceptance. Do not describe
+   A as full coding-capability parity or remove native delegation from the
+   product direction. Long-lived body actions and AD-2 validation may still use
+   owned jobs; a serialized submission tool need not block on their lifetime.
+
+4. **Resource limits versus behavioral rules.** The synthesis chooses one model
+   recovery retry, a minimum self-wake interval and per-task budgets. These are
+   engineering defaults, not separately requested owner policies. Recommend
+   configurable, visible limits using Rig's existing controls where possible;
+   distinguish transient-failure retry limits from a long-lived activity budget.
+   Exhaustion records a pause with its cause, not task success or a new rule that
+   the companion must leave the world. Keep idle autonomy off by default without
+   disabling an enabled game's continuation, Recap maintenance or an admitted
+   Dream run. The choice is these explicit resource controls versus retaining
+   the synthesis's numeric/default policy as a fixed first profile; do not copy
+   mysoul's fatigue/daily routine or add a behavior policy engine.
+
+5. **Owner versus outsider context.** The [adapter contract](#integration-contracts-retained-by-the-baseline)
+   identifies participants and filters groups, but does not yet say which Recap
+   or memory content an outsider's conversation receives. This is an unresolved
+   scope question, not evidence of a current leak: QQ integration is unbuilt.
+   Mysoul `laputa.py::ContextAssembler.base_bundle` and `refresh_recap_context`
+   include subject Recap only for `scope.audience == "owner"`. Recommend that
+   private owner Recap and private memory are not automatically projected into
+   outsider/group conversations; persona may be shared, and sharing history
+   requires an explicit scope choice. This must cover tool reads as well as
+   prompt assembly; hiding a prompt block alone is insufficient. The alternative
+   is intentionally shared conversation history. Reuse concrete participant/
+   conversation bindings rather than build a universal permission platform.
+
+### Conformance and delivery boundaries
+
+No new contradiction was found in the selected single core/Plan B, Rust-owned
+Recap and native Laputa, replaceable MemPalace backend, PEN/NeuroLink lifecycle
+split, official-QQ-only Octos donor, actively browsable NapCat without a mirrored
+history database, independent Minecraft companion or owner-logout discretion.
+AD-2 still includes executable Skills, automatic validated adoption and actual
+subsequent-use feedback; its current loader/setup gaps are recorded implementation
+work, not a decision to reintroduce per-candidate human approval. The official
+inbox and product navigation remain deferred. A stopped host cannot deliver a
+timely wake; daemon deployment remains a later choice, not a delivered feature.
+
+Code inspection confirms `vivy-durable/src/lib.rs` exports only the diagnostic
+probe, the normal recipe selects existing compaction and native subagents, and
+Python memory remains an explicitly enabled setup capability. The audit does
+not run the runtime or certify absence of every possible deviation. Evidence is
+source/document inspection at the recorded revisions; documentation changes are
+checked by diff review and `git diff --check`.
+
 ## Assistant context clarification (2026-10-31)
 
 The owner questioned treating retrieved evidence as part of the requested
@@ -188,8 +302,9 @@ a requirement to import its TypeScript runtime. At inspected Pi revision
 pi-agent-core; it has no built-in durable-mode switch. See the
 [durable reference](https://github.com/earendil-works/pi/blob/a14cdf90f0a76532f3e20bc3c01872837cef24ba/packages/durable/README.md).
 
-Mysoul supplies behavior evidence for committed Recap, explicit bounded recall,
-subject-scheduled wakeups and silent outcomes. It does not supply the new Rust
+Mysoul supplies behavior evidence for committed Recap and, separately, optional
+memory tools, subject-scheduled wakeups and silent outcomes. These optional
+reference capabilities do not become Recap prerequisites. It does not supply the new Rust
 runtime or require copying its LangGraph/SQLite implementation, fatigue model
 or fixed activity categories. Laputa remains the persona authority; the agent
 owns Recap and task context. Full MemPalace remains the current long-term backend
@@ -810,7 +925,7 @@ must preserve the task checkpoints and required active call pairs.
 | D0: Rig binding and store | One model/tool task through the coding face; observe holds/receipts at actual pinned integration points; reject an incompatible resume and a second writer; retain legacy recipe behavior |
 | D1: execution recovery | Kill before/after intent, after external effect but before result, after result commit but before publication, and after final commit; prove reuse, unknown outcomes, admission deduplication and no duplicate unsafe call |
 | D1: control/failure | Inject append/sync/serialization errors, torn tail and corruption; cancel with late results; introduce new input between two requested tools; inspect valid tool-call/result pairing and worker cleanup |
-| D2: context and memory | Inspect actual model requests for persona revisions and Recap coverage; restart and recall written evidence; reconcile a repeated/incomplete memory write and a missing Python namespace |
+| D2: context and memory | Inspect actual requests for persona revisions and Recap-only history with memory disabled. Separately, with memory enabled, verify explicit write/get/search after restart and reconcile repeated/incomplete writes and a missing Python namespace. |
 | D3: wake | Restart before/after a deadline, duplicate callback, replace/cancel deadline, wake while busy, silent outcome and exhausted budget |
 | D4: evolution | Evidence collected once; persona and executable Skill candidates validated; background validation admission distinguished from completion, with foreground handoff/cancellation exercised; tested Skill revision automatically adopted and actually called by subsequent work; usage/results returned as new evidence; failed/stale publication preserves the active version; restart and code/persona rollback exercised |
 
@@ -1164,8 +1279,12 @@ boundary while implementing the initial multiplayer route.
 
 ### Integration contracts retained by the baseline
 
-External adapters submit typed inputs to the same durable admission/handoff path,
-retaining source event ID, conversation/participant identity and correlation.
+External adapters retain source event ID, conversation/participant identity and
+correlation. Only events selected by enabled notification hooks, and explicit
+chat/task inputs, enter the durable admission/handoff path. Hook-disabled items
+stay available through source browsing or the later inbox without automatically
+requesting an agent decision; ignored groups stay filtered. Closing a hook does
+not cancel an already admitted task or disable direct owner input.
 Resolve owner identity from configured account bindings, not an inbound display
 name or an untrusted claim. Apply the configured group filters at the adapter.
 Re-delivery uses stable source IDs when the service supplies them; adapters must
@@ -1790,7 +1909,7 @@ addition and its verification. This does not expand the parked Goal/evolution wo
 | Skip species hashes and a standalone SDK | No content-addressed species identity, sealed manifests, attestation, or public SDK release work. |
 | Hybrid direct tools and Python workbench | Frequent coding tools remain direct; MCP and programmable composition live in Python. |
 | PEN capability packages and separate NeuroLink protocol | Importable packages deliver external capabilities; NeuroLink handles external conversations/events and loads channel packages ported from Octos. Minecraft starts with independent multiplayer; client control remains a second design route. See the locked 2026-10-30 decision above. |
-| Native delegation; optional Python orchestration later | Recipe-selected Rig wrapper provides single tasks, bounded parallel batches and chains. Python/apixis remains a later composition direction. See the dated subagent delivery record. |
+| Native delegation; optional APIX library composition later | Recipe-selected Rig wrapper provides single tasks, bounded parallel batches and chains. APIX/apixis remains optional, with no mandated second runtime or cross-language Rig bridge. See the dated subagent delivery record. |
 | Validate agent infrastructure through the current coding face | Coding has passed its initial real-task acceptance. Follow the 2026-10-31 infrastructure-first decision for new work and keep outstanding workbench provider evidence and new durable acceptance explicit. |
 
 The full Pi baseline is a coverage target, not the first delivery's acceptance
@@ -2216,12 +2335,13 @@ conversations, roles and directories support native follow-up after resume. The
 TUI exposes roles, progress, readable answers, child views and native usage;
 unknown pricing remains unknown. See [delivery evidence](logs/2026-10-25-subagents.md).
 
-The later direction remains Python/apixis orchestration over the same Rig
-execution path. Each agent owns its context/workbench; Rust owns identities,
-records and lifecycle. Graph state references host tasks. Before that later slice,
-resolve the bidirectional bridge, Python 3.12+ requirement, graph abort propagation
-and worker event-task cleanup described in the research record. Recipe assembly
-continues to select compiled capabilities. Existing delivery gates still apply.
+The earlier Python/apixis-to-Rig bridge is a historical proposal. The later owner
+clarification selects optional library-level composition, preferring the native
+APIX suite where suitable rather than requiring a complete runtime or cross-language
+Rig bridge. Exact ownership/interoperability still needs a concrete integration
+design; the old Python and bridge prerequisites are not selected requirements.
+Native Rig delegation remains the existing path. Recipe assembly continues to
+select compiled capabilities. Existing delivery gates still apply.
 
 The [mirrored decision record, section 17](research/2026-10-25-hybrid-agent-workbench-decisions.md#17-recursive-rig-agents-with-pythonapixis-orchestration)
 contains pinned Prime/Rig/apixis evidence. Section 17.7 records the latest scope;
