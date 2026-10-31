@@ -2,6 +2,14 @@
 
 ## D0 implementation checkpoint (2026-10-31)
 
+The subsequent owner authorization permits bounded patches in the `mastwet/rig`
+fork. The first local patch stops logging on saved serialization failure and keeps
+the diagnostic out of model-visible tool results; Vivy's diagnostic consumer is
+tested through an isolated local manifest. Normal recipe pins remain unchanged.
+See [fork evidence](research/2026-10-27-session-storage.md#rig-fork-saved-serialization-failure-2026-10-31).
+This supersedes the earlier no-upstream-implementation boundary below, without
+claiming the remaining durable interfaces or D1 have been implemented.
+
 The [D0 plan](plans/2026-10-31-d0-rig-probes.md) upgrades the active Rig pin to
 `fc556f982d501eea9d7167398a19386e4884e776` and supplies experimental persistence
 probes through the existing coding face. Ordinary coding retains Rig's default

@@ -1,5 +1,46 @@
 # Handoff: continue the independent assembly experiment
 
+## Rig fork: saved serialization failure (2026-10-31)
+
+The owner authorizes modifying `mastwet/rig` for the missing D0 seams. The editable
+checkout is `C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable`, branch
+`feat/durable-checkpoints`, based on audited Rig `fc556f982d501eea9d7167398a19386e4884e776`.
+This permission supersedes earlier no-upstream-patch instructions for these fixes;
+the existing reference checkout remains unchanged. Nothing has been pushed.
+Local Rig commit: `1ed6ee437e772ea120f2efadf9aa6001e5db67b5`.
+
+The first patch adds `Writer::fail` and routes saved component/resource serialization
+failures into the existing failure latch. It preserves the first cause, blocks all
+pending log writes and later saves, and keeps earlier bytes readable. Local notices
+retain the saved key/log/cause; tools refused because storage failed get a generic
+result so serializer diagnostics cannot disclose saved data to the model. A missing
+doc comment on Rig's non-Unix `kill_group` was also fixed to compile the path dependency
+on Windows; that function's behavior is unchanged.
+
+Vivy validates this with an isolated manifest, without changing its production pins:
+
+```powershell
+$env:CARGO_TARGET_DIR = 'C:/vtd0'
+$env:CARGO_PROFILE_DEV_DEBUG = '0'
+python scripts/rig_fork_probe.py --rig C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable
+```
+
+Omitting `--rig` runs the same acceptance tests on pinned upstream and reproduces
+the failure: a tool starts despite lost saved state. The fork refuses that dispatch.
+Final fork and normal pinned probe suites both pass 12 tests; Python checks pass 5.
+Rig memory passes 80 tests. ECS passes 129, with 4 failures reproduced unchanged on
+the baseline. Scoped Clippy and the two crates' WASM compilation checks pass.
+Evidence is under `.workspace/d0/fork-probe/`; `rig-fork-probe` selects diagnostic
+tests only, adding no runtime capability. The ordinary `d0-probe` feature keeps its
+original upstream characterizations. The normal D0 report is still about the pinned
+upstream, so it must not claim this local patch has already shipped there.
+
+This patch does not supply synced receipts, final-result gating, required saved-key
+validation or D1. Logging failure is not automatic cancellation of a normal turn.
+Next is the committed checkpoint/receipt seam, followed by the remaining D0 checks.
+Verification and the baseline Windows test failures are recorded in the
+[session-storage evidence](research/2026-10-27-session-storage.md#rig-fork-saved-serialization-failure-2026-10-31).
+
 ## D0 follow-up: session ownership enforced (2026-10-31)
 
 Following the owner's request to continue, the first local D0 gap is addressed.

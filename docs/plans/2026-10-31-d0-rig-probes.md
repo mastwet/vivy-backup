@@ -83,3 +83,43 @@ preserves the existing launcher protocol and keeps the change local.
 - [x] Run root tests, builds, assembled ownership/cancellation/optional-recipe
   checks and the D0 probe; update its result from ownership gap to supported.
 - [x] Review and commit the focused change with evidence and remaining limits.
+
+## Fork implementation: saved serialization failure (2026-10-31)
+
+The owner authorizes cloning and modifying `mastwet/rig`. Use a dedicated editable
+checkout at `.workspace/rig-durable`, on `feat/durable-checkpoints` based on the
+audited `fc556f982d501eea9d7167398a19386e4884e776`. Reference checkouts stay unchanged.
+This supersedes the earlier no-upstream-implementation boundary for the bounded
+D0 fixes. Publication remains a separate action.
+
+The first independently testable patch stops a Writer after a saved component or
+resource cannot serialize. Its pending records must not flush, subsequent frames
+must not resume logging, and `SessionLog::failure` must expose the original cause
+with the saved key and log identity. Existing write failures and normal saving
+retain their behavior. This is an integrity fix, not a synced receipt or an atomic
+transaction spanning earlier flushes; it does not automatically stop a normal turn.
+
+Files: Rig `crates/rig-memory/src/writer.rs`, ECS `session_log.rs` and its existing
+tests, the crate READMEs; Vivy diagnostic tests, local fork validation helper and
+the existing evidence/handoff documents. No production source pin changes before
+a reproducible fork revision is available to other checkouts.
+
+- [x] Reproduce dropped saved components/resources with pending conversation
+  changes; assert the stored bytes remain unchanged and the error is observable.
+- [x] Add a typed-error Writer failure entry point, preserving its first failure,
+  and route reflection serialization failures through it before `WriteLogs`.
+- [x] Verify both affected Rig packages and the Vivy diagnostic consumer against
+  explicit local source overrides. Missing nextest uses package-scoped cargo test.
+- [x] Review the concrete diff, fix reproduced issues, record evidence and the
+  still-open sync/result/required-state boundaries.
+
+Review focus: previously written records must remain readable; resource failure
+must block agent records too; later frames cannot silently restart logging;
+original append failures must not be overwritten; changes must compile in Rig's
+WASM-compatible core. Keep owned test data isolated and offline.
+
+Delivered locally as Rig `1ed6ee43`; integration evidence and the four unchanged
+Windows baseline failures are in the session-storage record. Independent review's
+diagnostic-disclosure finding was fixed with a failing then passing settled-outcome
+regression. No other findings were deferred. Publication and the other D0 seams
+remain separate follow-up work.

@@ -9,6 +9,9 @@ description = "Experimental D0 probes of the existing Rig execution and persiste
 [features]
 default = []
 d0-probe = []
+# Acceptance tests for the local Rig fork; normal pinned probes keep their
+# original characterization. This feature adds no runtime capability.
+rig-fork-probe = ["d0-probe"]
 
 [dependencies]
 rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }

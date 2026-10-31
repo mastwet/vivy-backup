@@ -21,6 +21,71 @@ Rig logs only as a conditional fallback after D0. The baseline's commit/recovery
 contract and explicitly unproven integration seams take precedence over older
 implementation suggestions below; this research is not runtime validation.
 
+## Rig fork: saved serialization failure (2026-10-31)
+
+After the local ownership fix, the owner authorizes source changes in
+[`mastwet/rig`](https://github.com/mastwet/rig). A dedicated local checkout, branch
+`feat/durable-checkpoints`, starts at the audited `fc556f9` revision. Production Vivy
+dependencies remain pinned until a fork revision is available to other checkouts.
+
+The first patch closes the serialization omission in the local fork: ECS calls
+`Writer::fail` when a saved component or resource cannot serialize. The shared
+Writer latch retains the first error and refuses all pending and subsequent flushes;
+earlier stored records are not rolled back. Regression tests cover component and
+resource failures, readable prior bytes, multiple pending logs, later frames,
+attempted restarts/forks, and preserving an earlier append error.
+
+Independent review found a new disclosure route: the stage's save-failure tool
+result interpolated the serializer's arbitrary diagnostic. An executed regression
+reproduced the text in a settled outcome. The tool result now gives a generic
+storage failure while `SessionLog::failure` and local notices retain the cause.
+This does not claim disk sync, cross-flush/blob atomicity, required-state validation,
+rollback, automatic turn cancellation or the D1 runtime.
+
+`scripts/rig_fork_probe.py` generates an ignored standalone manifest/lock, preserving
+the Vivy plugin source but selecting Rig's local packages transitively. It records
+the checkout revision and dirty-diff hash and runs 12 offline diagnostic tests.
+The same acceptance test fails on the stock pin with an actually started tool and
+passes on the patched source. The helper changes no normal recipe, Cargo pin or
+checked-in lock. This is local integration evidence, not a published dependency.
+
+The package-level Windows run exposed four `rig-ecs/tests/stages.rs` failures.
+All four reproduce on an unmodified detached `fc556f9` worktree:
+
+- `a_footprint_a_plugin_declared_on_a_call_stands`
+- `a_held_call_holds_back_only_the_calls_that_touch_what_it_writes`
+- `a_stopped_call_says_whether_it_ran_and_whether_it_may_have_changed_something`
+- `gate_sees_footprint_paths_normalized`
+
+The footprint fixtures use Unix-style paths, which become unrestricted scopes on
+Windows; the stopped-call fixture times out. The patch does not change these paths.
+Keep these failures visible rather than claiming a green full Rig suite. A separate
+Windows compilation failure in non-Unix `rig-tools::process::kill_group` was fixed
+by documenting that public function, without weakening `missing_docs` or changing
+runtime behavior. Nextest is unavailable locally, so checks use package-scoped
+`cargo test --locked`. Detailed run logs remain under ignored `.workspace/d0`.
+
+Final local Rig commit: `1ed6ee437e772ea120f2efadf9aa6001e5db67b5`, with a clean
+checkout recorded by the repeated consumer run. No push or PR was performed.
+
+| Executed check | Result |
+| --- | --- |
+| Rig `cargo test --locked -p rig-memory --all-features` | 80 passed, including 16 doctests |
+| Rig `cargo test --locked -p rig-ecs --no-fail-fast` | 129 passed including 7 doctests; the 4 named baseline stage failures remain |
+| Rig `cargo clippy --locked -p rig-memory -p rig-ecs --all-targets --all-features` | Passed |
+| Rig `cargo check --locked -p rig-memory -p rig-ecs --target wasm32-unknown-unknown` | Compiled; no WASM runtime test claimed |
+| Vivy `python scripts/rig_fork_probe.py --rig <checkout>` | 12 passed against the clean local commit |
+| Vivy pinned `cargo test --manifest-path plugins/vivy-durable/Cargo.toml --features d0-probe --locked` | Original 12 characterizations passed |
+| Python D0 checks | 5 passed |
+
+All checks used `CARGO_TARGET_DIR=C:/vtd0`, `CARGO_PROFILE_DEV_DEBUG=0` on Windows.
+The unmodified baseline comparison is in `fork-baseline-stages.log`; the patched
+suite is in `fork-ecs-final.log`. The privacy regression first failed with the raw
+serializer diagnostic in a settled tool outcome (`fork-review-red.log`) and then
+passed in the final ECS suite. During fixture construction a settled entity was
+collected before inspection; the final test observes settlement directly instead.
+No whole-workspace, hosted CI, real-provider or power-loss acceptance is claimed.
+
 ## D0 follow-up: local ownership (2026-10-31)
 
 The continued implementation closes the host ownership gap reproduced below.

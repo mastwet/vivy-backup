@@ -20,6 +20,8 @@ fn setup_on(store: Arc<dyn Store>) -> (App, Entity) {
     let (mut app, _) = app_on(&MemoryStore::default());
     app.insert_resource(SessionStore(store));
     app.add_plugins((AgentPlugin, SessionLogPlugin, D0ProbePlugin));
+    #[cfg(feature = "rig-fork-probe")]
+    app.register_type::<Unserializable>();
     app.add_open_tool(
         "probe",
         "A synthetic open operation",
@@ -339,6 +341,7 @@ impl serde::Serialize for Unserializable {
 }
 
 #[test]
+#[cfg(not(feature = "rig-fork-probe"))]
 fn saved_component_serialization_failure_does_not_fail_the_other_log_write() {
     let store = MemoryStore::default();
     let (mut app, _) = app_on(&store);
@@ -374,6 +377,35 @@ fn saved_component_serialization_failure_does_not_fail_the_other_log_write() {
             .contains_key(std::any::type_name::<Unserializable>())
     );
     assert!(!agent.conversation.messages().is_empty());
+}
+
+#[test]
+#[cfg(feature = "rig-fork-probe")]
+fn serialization_failure_keeps_vivy_execution_gate_closed() {
+    let store = MemoryStore::default();
+    let (mut app, agent) = setup_on(Arc::new(store.clone()));
+    app.world_mut().entity_mut(agent).insert(Unserializable);
+    let call = start_call(app.world_mut(), agent, ("probe", "failed-save"), json!({})).unwrap();
+    for _ in 0..20 {
+        app.update();
+    }
+    assert!(
+        !app.world().entity(call).contains::<Started>(),
+        "Vivy dispatched despite losing another saved component"
+    );
+    let failure = app
+        .world()
+        .resource::<rig_harness::rig_ecs::session_log::SessionLog>()
+        .failure()
+        .expect("serialization must be observable as a log failure");
+    assert!(
+        failure.contains("injected saved-state serialization failure"),
+        "{failure}"
+    );
+    assert!(
+        store.logs().unwrap().is_empty(),
+        "an incomplete checkpoint was appended"
+    );
 }
 
 fn pump(app: &mut App, done: impl Fn(&mut World) -> bool) {
