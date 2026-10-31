@@ -1,11 +1,20 @@
 use super::*;
 
 /// Owned, bounded subprocess for both bootstrap and the fixed Python workflow.
-pub(super) fn run(
+pub(crate) fn run(
     command: &mut std::process::Command,
     cancel: &Cancellation,
     progress: &Arc<Mutex<String>>,
     seconds: u64,
+) -> Result<Value, String> {
+    run_bounded(command, cancel, progress, seconds, None)
+}
+pub(crate) fn run_bounded(
+    command: &mut std::process::Command,
+    cancel: &Cancellation,
+    progress: &Arc<Mutex<String>>,
+    seconds: u64,
+    budget: Option<(&Path, u64)>,
 ) -> Result<Value, String> {
     command
         .stdin(Stdio::null())
@@ -57,6 +66,20 @@ pub(super) fn run(
     });
     let deadline = Instant::now() + Duration::from_secs(seconds);
     let status = loop {
+        if let Some((root, limit)) = budget {
+            let size = directory_bytes(root);
+            if size.as_ref().map_or(true, |bytes| *bytes > limit) {
+                child.control().kill();
+                let _ = child.child.wait();
+                let _ = output.join();
+                let _ = errors.join();
+                return Err(format!(
+                    "Validation scratch budget exhausted or unreadable: {}",
+                    size.map(|n| format!("{n} bytes, limit {limit}"))
+                        .unwrap_or_else(|e| e.to_string())
+                ));
+            }
+        }
         if Instant::now() >= deadline || cancel.cancelled.load(Ordering::SeqCst) {
             child.control().kill();
             let _ = child.child.wait();
@@ -85,6 +108,26 @@ pub(super) fn run(
         ));
     }
     Ok(result)
+}
+
+pub(crate) fn directory_bytes(root: &Path) -> std::io::Result<u64> {
+    if !root.exists() {
+        return Ok(0);
+    }
+    let mut total = 0u64;
+    for item in std::fs::read_dir(root)? {
+        let path = item?.path();
+        let metadata = std::fs::symlink_metadata(&path)?;
+        if metadata.file_type().is_symlink() {
+            return Err(std::io::Error::other("staging symlinks are unsupported"));
+        }
+        total = total.saturating_add(if metadata.is_dir() {
+            directory_bytes(&path)?
+        } else {
+            metadata.len()
+        });
+    }
+    Ok(total)
 }
 
 pub(super) fn ensure(

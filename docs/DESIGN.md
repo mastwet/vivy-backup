@@ -1,5 +1,25 @@
 # Decisions and assembly direction
 
+## D4 AutoDream implementation (2026-11-01)
+
+The persistent recipe now compiles `vivy-durable/autodream`, including the D3/D2
+features, and uses `vivy.durable.v3` for **new D4 sessions**. The internal Dream
+shares Rig execution but excludes conversational persona and automatic Recap.
+It collects committed evidence and submits persona or executable pure-Python
+Skill candidates to host-owned background validation. Passing candidates publish
+automatically within admitted scope; changed dependencies use existing setup.
+New model/direct-tool operations select current, while model-planned tools and
+retries preserve the code/environment/instruction selection. Actual managed
+callable usage becomes later evidence. Failed or stale candidates preserve current.
+
+The [implementation mapping](#d4-implementation-mapping-2026-11-01) describes the
+ownership and recovery paths. [HANDOFF](HANDOFF.md#d4-autodream-ad-2-2026-11-01)
+records verification, commands, limits and review fixes for the completed
+[D4 plan](plans/2026-11-01-d4-autodream.md). This closes the selected AD-2 loop in
+synthetic Windows acceptance; real-provider joint acceptance remains outstanding.
+No Rig revision, product entry point or external transport is changed. The dated
+D0-D3 and synthesis sections below retain their historical implementation scope.
+
 ## D3 persistent waits and wakes (2026-11-01)
 
 The persistent recipe selects `vivy-durable/wake` at compilation. It includes
@@ -359,11 +379,13 @@ design. The dated sections retain rationale and alternatives: Plan A/C and
 AD-1/AD-3 are not parallel implementation tracks. PEN/NeuroLink positions are
 locked, but their complete package/wire protocols are not frozen by this review.
 
-The existing code supplies recipe assembly, the Rig coding path, native bounded
-delegation, workbench/Skill/MCP execution and native MemPalace integration.
+At this synthesis review, the existing code supplied recipe assembly, the Rig
+coding path, native bounded delegation, workbench/Skill/MCP execution and native
+MemPalace integration.
 Durable commit gates, native persona integration, assistant Recap/wake and AD-2
-publication are still to be built. D0 must prove the required Rig seams at a
-deliberately selected pin before the durable design is called implementable on
+publication were still to be built; the implementation entries above supersede
+that status. D0 had to prove the required Rig seams at a deliberately selected
+pin before the durable design could be called implementable on
 that pin. No dependency upgrade or new upstream compatibility claim is made here.
 
 Implementation order is D0/D1 execution, D2 context/memory, D3 wake, then D4
@@ -385,9 +407,9 @@ calls. No new owner decision is needed to prepare the D0/D1 implementation plan.
 
 The review checked existing recipe wiring, prompt replacement, Skill discovery/
 binding, Python preparation/publication and worker replacement against these
-contracts. Current source does not yet provide the proposed durable gates or
-revision publisher. Remaining proof obligations are receipt-aware Rig scheduling,
-redacted outcome capture, resume-format detection, cancel/recovery ordering,
+contracts. Source at that review did not provide the proposed durable gates or
+revision publisher. The then-remaining proof obligations were receipt-aware Rig
+scheduling, redacted outcome capture, resume-format detection, cancel/recovery ordering,
 Windows file durability and actual integrated provider behavior. D0 failure must
 produce a bounded upstream-gap decision, not a silent switch to Plan A/C or a
 claim of durable support. PEN wire/package schemas, game backend and product
@@ -1778,10 +1800,9 @@ New dependency/source/native-memory scope outside the existing grant still uses
 the existing setup decision; leave that candidate pending while other valid work
 can continue. It is not a recurring human review of the candidate's content.
 Do not mark a publication trusted merely because Dream wrote it or remove the
-startup validation-before-interpreter check. Current code hashes Skill paths and
-pyprojects into setup scope and checks the executable path for worker replacement;
-both mechanisms need explicit adaptation for AD-2. No claim is made that today's
-loader already implements these rules.
+startup validation-before-interpreter check. The pre-D4 code hashed Skill paths
+and pyprojects into setup scope and checked the executable path for worker
+replacement; D4 adapts both mechanisms as mapped below.
 
 **Feedback and completion.** Instrument managed callable entry points and their
 results in the existing workbench records, retaining actual code revision and
@@ -1791,6 +1812,33 @@ publication alone is not evolution closure. D4 requires an executable defect
 case, actual subsequent call, returned evidence, persona activation, cancellation,
 failed/stale candidates, restart around publication and callable rollback. These
 records demonstrate closure; they do not by themselves prove quality improvement.
+
+#### D4 implementation mapping (2026-11-01)
+
+The `autodream` Cargo feature extends the persistent recipe and stores durable
+schema v3. Its coordinator uses one internal role on the same Rig execution path,
+without `SpawnedBy` or persona injection; Dream's automatic Recap is disabled.
+Explicit requests produce immutable evidence references and consumed windows.
+`candidate_submit` freezes a persona or pure-Python Skill. The host commits job
+admission, dispatch, validation, adoption intent and result through the existing
+checkpoint owner. Result delivery uses a deduplicated native input to the owner.
+
+The workbench owner extends `current.json` with immutable managed revisions and
+retained check specifications. Shared preparation/publication ownership uses the
+same OS-backed lock in Rust and Python. A stage becomes consumable only after the
+environment and retained callable checks pass. Setup retains the installation
+decision; source revision changes alone do not expand it. An expanded grant does
+not invalidate locally validated old publications needed by in-flight calls.
+This is retention, not an additional authorization store in project files.
+
+`validation_wait` suspends the owner; `validation_detach` (or `/dream detach`)
+removes its completion wait without cancelling the admitted job. Explicit job or
+owning-task cancellation stops the process tree and fences activation. Foreground
+work and validation are independent. One-shot Dream waits use D3's saved clock;
+there is no implicit wake/reflect loop. An uncertain dispatched check remains
+unknown unless its saved specification explicitly declares fixture/scratch replay
+safety; this declaration is not an OS sandbox. See HANDOFF for executed tests and
+the distinction between synthetic acceptance and real-provider support.
 
 ## Automatic workbench preparation: agreed direction (2026-10-28)
 

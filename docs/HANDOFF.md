@@ -1,5 +1,106 @@
 # Handoff: continue the independent assembly experiment
 
+## D4 AutoDream AD-2 (2026-11-01)
+
+Branch `feat/d4-autodream`, based on `334ed9e`, in
+`C:/Users/Administrator/.codex/worktrees/aedb/vivy-test`. Use **new D4 sessions**:
+the durable state is now `vivy.durable.v3`. Main, production Rig pins and the
+local checkpoint fork (`810d7dfd`) remain unchanged. No merge/push is included.
+
+The persistent recipe now compiles `autodream`, which includes D3 waits and D2
+context. Other recipes do not acquire it through a runtime flag. Build/run with
+the same commands in the historical D3 section below. The coding launcher remains
+the ordinary coding recipe. Initialize the Python workbench through `/setup python`
+before expecting managed Skill validation; native memory is still optional.
+
+```text
+/dream run Review the recent failed calculation
+/dream status
+/dream detach job:1
+/dream cancel
+/python rollback <expected-publication-id> <retained-publication-id>
+```
+
+Dream is a fixed internal durable agent without `SpawnedBy`, conversational persona
+or automatic Recap. It shares the compiled runtime/tools, not foreground task
+ownership. Explicit requests coalesce; idle reflection stays off. It can read
+committed evidence, author files, submit a candidate, wait, revise or finish
+silently. D3 one-shot waits remain available inside Dream. Foreground work takes
+priority at operation boundaries; independently admitted checks keep running.
+
+Tools are `dream_request`, `dream_status`, `candidate_submit`, `validation_status`,
+`validation_wait`, `validation_detach` and `validation_cancel`. Submission returns
+admission, not a passing check. Detach removes the completion wait; cancel stops
+the job. Cancelling its owning Dream task also stops it. Cancelling unrelated
+foreground work does not. Exit stops the owned validation process tree. A live
+host is required; no worker daemon or OS scheduler is added.
+
+Managed Skills contain `SKILL.md`, static `pyproject.toml`, and
+`src/import_name/__init__.py` exposing `run`. Validation uses JSON argument/expected
+value cases in a fresh process, with optional unchanged old/new regression checks.
+The source is frozen and checked before/after execution. The workbench publication
+selects sources and environment together. Checks use the full proposed workbench
+inventory/bootstrap, including ordinary Skills, to reject binding conflicts.
+New model operations and direct tool calls select current; model-planned tools
+and retries retain their original selection, even across a later publication.
+Workers bind memory settings to the selected manifest and reset variables when
+adopting a different publication. Usage events cover the managed `run` binding,
+not every arbitrary Python import or side effect.
+
+Source-only changes reuse the prepared environment and existing installation
+grant. Changed dependencies wait for the existing setup grant, prepare a separate
+environment, revalidate retained Skills, then validate the candidate before
+activation. Manual preparation also preserves/rechecks the managed set. Local
+validation receipts retain authority for old pinned publications when a later
+grant expands scope; project copies alone cannot confer that authority. Explicit
+grant revocation is not implemented by this slice.
+
+Evidence and jobs live in durable state plus `.vivy/evolution/`; immutable sources,
+staged environments and publication history remain under `.vivy/workbench/`.
+The default staging/scratch budget is 256 MiB, with no automatic history deletion.
+Dependency environments remain owned by setup. Validation defaults to 60 seconds
+(maximum one hour) and 1–16 assertions. The scratch monitor is a process-level
+bound, not an OS disk quota or sandbox; one write may exceed it before the next
+poll. Published/pinned versions are retained for rollback. Code rollback does not
+reverse external effects.
+
+Executed Windows verification: all 15 synthetic native acceptance cases passed,
+covering generated repair, old failure/new success, adoption, actual call,
+feedback, persona isolation, failed checks, code rollback during model
+generation, eight crash/reopen positions (including explicit safe retry), waiter
+detachment, foreground progress, cancellation/exit process-tree cleanup, new
+dependency setup/staging, and D3/D4 refusals without log changes. Rust checks passed
+52 durable, 34 workbench, 63 basics and five Laputa tests, plus 34 root tests.
+The D3 feature set still passes its 47 tests and native wake regression matrix.
+Python passed 39 tests with 10 explicit native-memory tests skipped; this includes
+the offline dependency/space-path regression. Formatting, Python compilation and
+Git whitespace checks passed. A separately built ordinary executable passed
+adoption and an actual subsequent callable invocation with fault-hook environment
+variables set and no diagnostic trace emitted. No real-provider, new terminal UI,
+native-memory engine, OS-crash or power-loss acceptance is added by D4. Retained
+history and cumulative checkpoint logs remain unbounded; this does not establish
+economical multi-day operation.
+
+One fresh independent whole-branch review found four important issues and no
+critical issues. One combined fix pass added regressions for full-inventory
+validation, retention before manual scope expansion, pinned memory configuration,
+and direct-call publication selection. All four regressions reproduced their
+failure before the fix and passed afterward. The reviewer inspected source and
+evidence and independently checked whitespace; the executor ran the final suites
+and complete native matrix after the fixes.
+
+Reproduce with `scripts/rig_fork_probe.py --autodream --rig <rig>` and
+`scripts/autodream_smoke.py <vivy.exe> <rig>` (`--only` selects a native case group).
+The compatibility group needs the retained D3 executable under
+`.workspace/d4/baseline/`. Evidence is ignored under `.workspace/d4/`. One observed
+full live fixture used 28 requests, 46.353 seconds and 2,318,500 workspace bytes;
+observed first-admission-to-terminal times were 0.890 seconds for initial Skill
+publication and 2.564 seconds for repair (polling observations, including adoption);
+foreground work during validation took 0.277–0.306 seconds, and while dependency
+setup was pending took 0.501 seconds. An incremental diagnostic build took 24.282
+seconds; the ordinary build took 23.25 seconds. These are local synthetic
+observations, not general performance claims.
+
 ## D3 persistent waits and wakes (2026-11-01)
 
 Branch `feat/d3-durable-wake`, based on D2 `c0bad0d`, in

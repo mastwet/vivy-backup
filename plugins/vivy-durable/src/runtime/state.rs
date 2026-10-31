@@ -48,6 +48,10 @@ pub struct Operation {
     pub outcome: Option<Value>,
     pub published: bool,
     pub resolution: Option<String>,
+    #[cfg(feature = "autodream")]
+    pub publication: Option<String>,
+    #[cfg(feature = "autodream")]
+    pub usage: Vec<Value>,
 }
 
 #[derive(Component, Reflect, Clone, Debug, Serialize)]
@@ -66,6 +70,8 @@ pub struct DurableAgentState {
     pub decision_pending: bool,
     #[cfg(feature = "wake")]
     pub wakes: Vec<wake::WakeRecord>,
+    #[cfg(feature = "autodream")]
+    pub evolution: autodream::EvolutionState,
 }
 
 impl<'de> Deserialize<'de> for DurableAgentState {
@@ -83,6 +89,8 @@ impl<'de> Deserialize<'de> for DurableAgentState {
             decision_pending: bool,
             #[cfg(feature = "wake")]
             wakes: Vec<wake::WakeRecord>,
+            #[cfg(feature = "autodream")]
+            evolution: autodream::EvolutionState,
         }
         let wire = Wire::deserialize(deserializer)?;
         let state = Self {
@@ -96,6 +104,8 @@ impl<'de> Deserialize<'de> for DurableAgentState {
             decision_pending: wire.decision_pending,
             #[cfg(feature = "wake")]
             wakes: wire.wakes,
+            #[cfg(feature = "autodream")]
+            evolution: wire.evolution,
         };
         state.validate().map_err(serde::de::Error::custom)?;
         Ok(state)
@@ -134,6 +144,8 @@ impl DurableAgentState {
         }
         #[cfg(feature = "wake")]
         wake::validate(self)?;
+        #[cfg(feature = "autodream")]
+        autodream::validate(self)?;
         let mut operations = std::collections::BTreeSet::new();
         for op in &self.operations {
             if !operations.insert(&op.id)
@@ -208,6 +220,8 @@ impl Default for DurableAgentState {
             decision_pending: false,
             #[cfg(feature = "wake")]
             wakes: Vec::new(),
+            #[cfg(feature = "autodream")]
+            evolution: Default::default(),
         }
     }
 }

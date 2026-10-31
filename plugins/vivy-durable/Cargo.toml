@@ -16,6 +16,7 @@ checkpoint-probe = []
 runtime = ["dep:vivy-gateway", "dep:schemars"]
 assistant-context = ["runtime", "dep:vivy-laputa"]
 wake = ["assistant-context"]
+autodream = ["wake", "dep:vivy-python", "dep:vivy-process", "dep:vivy-basics"]
 
 [dependencies]
 rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }
@@ -28,6 +29,9 @@ sha2 = "0.10"
 schemars = { version = "1", optional = true }
 vivy-gateway = { path = "../vivy-gateway", default-features = false, optional = true }
 vivy-laputa = { path = "../vivy-laputa", optional = true }
+vivy-python = { path = "../vivy-python", features = ["managed-skills"], optional = true }
+vivy-process = { path = "../../crates/vivy-process", optional = true }
+vivy-basics = { path = "../vivy-basics", optional = true }
 
 [dev-dependencies]
 rig-core = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776", features = ["test-utils"] }

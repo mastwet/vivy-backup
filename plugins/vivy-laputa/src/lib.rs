@@ -96,6 +96,13 @@ impl PersonaStore {
         }
         Ok(all)
     }
+    /// Only activated ancestry counts; a prepared revision is not adoption.
+    pub fn activated(&self, id: &str) -> io::Result<Option<Persona>> {
+        Ok(self
+            .ancestors(&self.read()?)?
+            .into_iter()
+            .find(|p| p.last_update_id == id))
+    }
     pub fn update(
         &self,
         expected: u64,
@@ -196,6 +203,9 @@ pub struct PersonaRevision {
     pub persona_id: String,
     pub revision: u64,
 }
+/// Explicit internal roles such as Dream do not inherit conversational persona.
+#[derive(Component)]
+pub struct PersonaExcluded;
 #[derive(Default)]
 pub struct LaputaPlugin;
 #[derive(SystemSet, Clone, Debug, PartialEq, Eq, Hash)]
@@ -228,11 +238,15 @@ fn source(world: &mut World) {
 }
 
 fn compose(
-    mut calls: Query<(Entity, &mut ModelRequest), (Added<Admitted>, Without<Restored>)>,
+    mut calls: Query<(Entity, &ForAgent, &mut ModelRequest), (Added<Admitted>, Without<Restored>)>,
+    excluded: Query<(), With<PersonaExcluded>>,
     source: Res<PersonaSource>,
     mut commands: Commands,
 ) {
-    for (entity, mut request) in &mut calls {
+    for (entity, agent, mut request) in &mut calls {
+        if excluded.contains(agent.0) {
+            continue;
+        }
         let Some(prompt) = &mut request.prompt else {
             continue;
         };

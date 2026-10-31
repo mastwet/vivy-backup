@@ -61,6 +61,7 @@ class Gateway(Handler):
 
 def build(builder, rig, environment):
     source = (ROOT/'recipes/persistent-agent.yaml').read_text(encoding='utf-8')
+    source = source.replace('vivy-durable: [autodream]', 'vivy-durable: [wake]')
     source = source.replace('name: persistent-agent', 'name: d3-matrix').replace('vivy-durable: [wake]', 'vivy-durable: [wake, checkpoint-probe]')
     source = re.sub(r'path: ../plugins/([^\s]+)', lambda m: 'path: '+json.dumps(str(ROOT/'plugins'/m[1])), source)
     recipe = OUT/'d3-matrix.yaml'

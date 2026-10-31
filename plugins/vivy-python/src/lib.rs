@@ -21,6 +21,8 @@ use std::sync::{
 use std::time::Instant;
 use vivy_process::{Control, OwnedChild};
 
+#[cfg(feature = "managed-skills")]
+pub mod managed;
 mod management;
 #[cfg(feature = "memory-tools")]
 mod memory_tools;
@@ -45,6 +47,23 @@ struct PythonSettings {
     project_root: PathBuf,
     #[serde(skip)]
     session: String,
+    #[serde(skip)]
+    usage: Arc<Mutex<Vec<Value>>>,
+    #[cfg(feature = "managed-skills")]
+    #[serde(skip)]
+    selected: Option<managed::Publication>,
+    #[cfg(feature = "managed-skills")]
+    #[serde(skip)]
+    user_home: PathBuf,
+    #[cfg(feature = "managed-skills")]
+    #[serde(skip)]
+    managed_requirements: Vec<String>,
+    #[cfg(feature = "managed-skills")]
+    #[serde(skip)]
+    stage_only: bool,
+    #[cfg(feature = "managed-skills")]
+    #[serde(skip)]
+    pinned: bool,
 }
 impl Default for PythonSettings {
     fn default() -> Self {
@@ -57,6 +76,17 @@ impl Default for PythonSettings {
             agent: "standalone".into(),
             project_root: PathBuf::new(),
             session: "unsaved".into(),
+            usage: Arc::default(),
+            #[cfg(feature = "managed-skills")]
+            selected: None,
+            #[cfg(feature = "managed-skills")]
+            user_home: PathBuf::new(),
+            #[cfg(feature = "managed-skills")]
+            managed_requirements: Vec::new(),
+            #[cfg(feature = "managed-skills")]
+            stage_only: false,
+            #[cfg(feature = "managed-skills")]
+            pinned: false,
         }
     }
 }
@@ -66,16 +96,25 @@ struct Workbenches(HashMap<Entity, Arc<Workbench>>);
 
 #[derive(Default)]
 pub struct PythonPlugin;
+#[derive(SystemSet, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct BindWorkbench;
 impl Plugin for PythonPlugin {
     fn build(&self, app: &mut App) {
         app.add_setting::<PythonSettings>("python")
             .init_resource::<Workbenches>();
         management::install(app);
+        #[cfg(feature = "managed-skills")]
+        managed::install(app);
         app.add_tool_per_call(
             PythonTool::for_directory(PathBuf::new()),
             ToolOptions::default(),
         );
-        app.add_systems(AgentPass, bind_calls.in_set(PrepareSystems::Edit));
+        app.add_systems(
+            AgentPass,
+            bind_calls
+                .in_set(PrepareSystems::Edit)
+                .in_set(BindWorkbench),
+        );
         app.add_systems(First, (register_credentials, prune_workers).chain());
         app.add_systems(
             Last,
@@ -102,6 +141,8 @@ fn bind_calls(
     ids: Query<&AgentId>,
     root: Res<ProjectRoot>,
     paths: Option<Res<SessionPaths>>,
+    #[cfg(feature = "managed-skills")] pins: Query<&managed::PinnedCall>,
+    #[cfg(feature = "managed-skills")] home: Option<Res<RigHome>>,
 ) {
     for (call, request, agent, mut handler) in &mut calls {
         let name = request.call.function.name.as_str();
@@ -135,6 +176,26 @@ fn bind_calls(
             .and_then(|p| p.0.id())
             .map(|id| id.to_string())
             .unwrap_or_else(|| "unsaved".into());
+        #[cfg(feature = "managed-skills")]
+        if let Ok(pin) = pins.get(call) {
+            configured.pinned = true;
+            configured.user_home = home
+                .as_ref()
+                .map(|h| h.0.root().to_path_buf())
+                .unwrap_or_else(|| RigHome::default().0.root().to_path_buf());
+            configured.usage = pin.usage.clone();
+            if let Some(id) = &pin.publication {
+                match managed::PublicationStore::new(&root.0, &configured.user_home).selected(id) {
+                    Ok(selected) => configured.selected = Some(selected),
+                    Err(e) => {
+                        commands.entity(call).insert(Outcome::refused(format!(
+                            "Pinned Skill publication is unavailable: {e}"
+                        )));
+                        continue;
+                    }
+                }
+            }
+        }
         let tool = PythonTool {
             state,
             dir: place.base,
@@ -424,6 +485,19 @@ impl PythonTool {
         };
         let publication =
             management::prepared_python(&project.join(".vivy/workbench")).map_err(error)?;
+        #[cfg(feature = "managed-skills")]
+        if self.settings.pinned && self.settings.selected.is_none() && publication.is_some() {
+            return Err(error("No workbench publication was selected for this operation; re-plan after setup completes".into()));
+        }
+        #[cfg(feature = "managed-skills")]
+        let publication = if let Some(selected) = &self.settings.selected {
+            managed::PublicationStore::new(project, &self.settings.user_home)
+                .selected(&selected.id)
+                .map_err(|e| error(e.to_string()))?;
+            Some(selected.id.clone())
+        } else {
+            publication
+        };
         {
             let mut previous = self
                 .state
@@ -464,8 +538,19 @@ impl PythonTool {
         *self.state.control.lock().unwrap_or_else(|e| e.into_inner()) =
             Some(worker.process.control());
         let timeout = Duration::from_secs(timeout_secs.unwrap_or(60).max(1));
+        self.settings
+            .usage
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
         let reply = worker
-            .execute(request, timeout, self.live.as_ref(), cancellation)
+            .execute(
+                request,
+                timeout,
+                self.live.as_ref(),
+                cancellation,
+                self.settings.usage.clone(),
+            )
             .map_err(error)?;
         {
             let mut active = self

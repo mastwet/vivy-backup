@@ -220,7 +220,13 @@ fn task_messages(
     let mut sources = vec![format!("{task}/input")];
     let mut calls = BTreeMap::new();
     #[cfg(feature = "wake")]
-    let mut notices = super::wake::notices(state, task).into_iter().peekable();
+    let mut notices = {
+        let mut notices = super::wake::notices(state, task);
+        #[cfg(feature = "autodream")]
+        notices.extend(super::autodream::jobs::notices(state, task));
+        notices.sort_by_key(|n| n.0);
+        notices.into_iter().peekable()
+    };
     for op in state.operations.iter().filter(|o| o.task == task) {
         #[cfg(feature = "wake")]
         if op.kind == "model" {

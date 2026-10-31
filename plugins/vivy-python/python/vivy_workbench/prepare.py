@@ -16,11 +16,23 @@ import uuid
 def environment_lock(root):
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
-    with (root / 'prepare.lock').open('a+b') as stream:
+    # Windows may refuse even the initial byte write while Rust holds a whole-
+    # file lock. Normalize that path as the same competing-owner result.
+    stream = None
+    try:
+        stream = (root / 'prepare.lock').open('a+b')
         if stream.tell() == 0:
             stream.write(b'\0')
             stream.flush()
         stream.seek(0)
+    except OSError as exc:
+        if stream:
+            try:
+                stream.close()
+            except OSError:
+                pass
+        raise RuntimeError('Python preparation is busy in another process') from exc
+    with stream:
         try:
             if os.name == 'nt':
                 import msvcrt
@@ -122,7 +134,7 @@ def check(root, *, scope='', native_memory=False, memory_root=None):
         return {'outcome': 'error', 'detail': str(exc)}
 
 
-def prepare(root, requirements, *, python=sys.executable, skills=(), offline=False, native_memory=False, memory_root=None, scope='', uv='uv', reuse=True):
+def prepare(root, requirements, *, python=sys.executable, skills=(), offline=False, native_memory=False, memory_root=None, scope='', uv='uv', reuse=True, publish=True, managed_requirements=()):
     root, requirements = Path(root).resolve(), Path(requirements).resolve()
     memory_root = Path(memory_root).resolve() if memory_root else root / 'native-memory'
     temporary_directory = root / 'tmp'
@@ -130,6 +142,9 @@ def prepare(root, requirements, *, python=sys.executable, skills=(), offline=Fal
     invoke = lambda command: run(command, temporary=temporary_directory)
     skill_paths = [Path(row['file']).parent.resolve() for row in skills if (Path(row['file']).parent / 'pyproject.toml').is_file()]
     digest = hashlib.sha256(requirements.read_bytes() + str(python).encode() + str(native_memory).encode() + str(memory_root).encode())
+    managed_requirements = sorted(set(managed_requirements))
+    if managed_requirements:
+        digest.update(json.dumps(managed_requirements).encode())
     for path in skill_paths:
         digest.update(str(path).encode())
         digest.update((path / 'pyproject.toml').read_bytes())
@@ -144,7 +159,7 @@ def prepare(root, requirements, *, python=sys.executable, skills=(), offline=Fal
         if reuse and published.is_file():
             try:
                 current = json.loads(published.read_text(encoding='utf-8'))
-                if current['identity'] == identity and current.get('scope', '') == scope and Path(current['executable']).is_file():
+                if current.get('preparation_key', current['identity']) == identity and current.get('scope', '') == scope and Path(current['executable']).is_file():
                     if check(root, scope=scope, native_memory=native_memory, memory_root=memory_root)['outcome'] != 'ready':
                         raise RuntimeError('Published environment needs repair')
                     invoke([current['executable'], '-I', '-c', 'import sys; assert sys.version_info >= (3,11)'])
@@ -164,10 +179,15 @@ def prepare(root, requirements, *, python=sys.executable, skills=(), offline=Fal
         invoke([uv, 'pip', 'sync', '--python', str(executable), '--require-hashes', str(requirements)] + (['--offline'] if offline else []))
         if skill_paths:
             stage('trusted-skills')
-            command = [uv, 'pip', 'install', '--python', str(executable), '--constraint', str(requirements)]
+            # uv's constraint option splits whitespace in native paths; a file
+            # URI preserves the exact Windows path, including spaces.
+            command = [uv, 'pip', 'install', '--python', str(executable), '--constraint', requirements.as_uri()]
             for path in skill_paths:
                 command.extend(['--editable', str(path)])
             invoke(command + (['--offline'] if offline else []))
+        if managed_requirements:
+            stage('managed-dependencies')
+            invoke([uv, 'pip', 'install', '--python', str(executable), '--constraint', requirements.as_uri()] + (['--offline'] if offline else []) + ['--'] + managed_requirements)
         versions = invoke([str(executable), '-I', '-c', 'import importlib.metadata,json,sys; assert sys.version_info >= (3,11); print(json.dumps({d.metadata["Name"]:d.version for d in importlib.metadata.distributions()}))'])
         imports = ['mcp'] if 'mcp==' in requirements.read_text(encoding='utf-8') else []
         if native_memory:
@@ -178,10 +198,15 @@ def prepare(root, requirements, *, python=sys.executable, skills=(), offline=Fal
         if native_memory:
             stage('memory-assets-and-probe')
             invoke([str(executable), '-I', '-c', native_code])
-        current = {'identity': identity, 'executable': str(executable), 'packages': json.loads(versions),
+        environment_identity = hashlib.sha256((identity + str(executable) + versions).encode()).hexdigest()
+        current = {'identity': environment_identity, 'preparation_key':identity, 'executable': str(executable), 'packages': json.loads(versions),
                    'seconds': time.monotonic() - started, 'scope': scope, 'imports': imports,
                    'skills': list(skills),
+                   'managed_requirements': managed_requirements,
                    'memory_ready': native_memory, 'memory_root': str(memory_root) if native_memory else None}
+        if not publish:
+            stage('staged')
+            return current
         stage('publish')
         temporary = root / (uuid.uuid4().hex + '.json.tmp')
         with temporary.open('x', encoding='utf-8') as stream:

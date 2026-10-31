@@ -112,7 +112,7 @@ def main():
     # Keep this matrix on the original D1 contract after the main recipe adopts
     # D2. D2 projection/maintenance has its own executable acceptance script.
     source=re.sub(r"  - name: persona\n.*?(?=  - name: print)","",source,flags=re.S)
-    source=source.replace(", vivy_durable::AssistantContextPlugin","").replace("vivy-durable: [assistant-context]","vivy-durable: [runtime]").replace("vivy-durable: [wake]","vivy-durable: [runtime]")
+    source=source.replace(", vivy_durable::AssistantContextPlugin","").replace("vivy-durable: [assistant-context]","vivy-durable: [runtime]").replace("vivy-durable: [wake]","vivy-durable: [runtime]").replace("vivy-durable: [autodream]","vivy-durable: [runtime]")
     source=source.replace("name: persistent-agent","name: persistent-matrix").replace("vivy-durable: [runtime]","vivy-durable: [runtime, checkpoint-probe]")
     source=re.sub(r"path: ../plugins/([^\s]+)",lambda m:"path: "+json.dumps(str(ROOT/"plugins"/m[1])),source)
     recipe=OUT/"persistent-matrix.yaml"

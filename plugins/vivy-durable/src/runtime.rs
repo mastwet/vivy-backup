@@ -13,6 +13,8 @@ use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, io};
 #[cfg(feature = "assistant-context")]
 pub mod assistant;
+#[cfg(feature = "autodream")]
+pub mod autodream;
 mod state;
 mod storage;
 #[cfg(feature = "wake")]
@@ -23,8 +25,10 @@ use storage::{committed, healthy};
 
 #[cfg(not(feature = "wake"))]
 const KEY: &str = "vivy.durable.v1";
-#[cfg(feature = "wake")]
+#[cfg(all(feature = "wake", not(feature = "autodream")))]
 const KEY: &str = "vivy.durable.v2";
+#[cfg(feature = "autodream")]
+const KEY: &str = "vivy.durable.v3";
 
 #[derive(Default)]
 pub struct DurablePlugin;
@@ -65,6 +69,8 @@ fn inspection_tool(name: &str) -> bool {
         "memory_get",
         "memory_search",
         "wake_status",
+        "dream_status",
+        "validation_status",
     ]
     .contains(&name)
 }
@@ -79,7 +85,13 @@ impl Plugin for DurablePlugin {
             .require(
                 std::any::type_name::<DurableAgentState>(),
                 KEY,
-                if cfg!(feature = "wake") { 2 } else { 1 },
+                if cfg!(feature = "autodream") {
+                    3
+                } else if cfg!(feature = "wake") {
+                    2
+                } else {
+                    1
+                },
             )
             .expect("unique durable schema");
         app.add_observer(|added:On<Add<Agent>>, mut commands:Commands| {
@@ -127,6 +139,8 @@ impl Plugin for DurablePlugin {
         });
         #[cfg(feature = "wake")]
         wake::install(app);
+        #[cfg(feature = "autodream")]
+        autodream::install(app);
     }
 }
 
@@ -493,6 +507,10 @@ fn admit_inputs(world: &mut World) {
         if wake::admit(world, call, agent, &input) {
             continue;
         }
+        #[cfg(feature = "autodream")]
+        if autodream::jobs::admit(world, call, agent, &input) {
+            continue;
+        }
         #[cfg(feature = "assistant-context")]
         if world
             .get::<assistant::AssistantContextState>(agent)
@@ -777,6 +795,21 @@ fn gate(world: &mut World) {
         if !healthy(world) {
             continue;
         }
+        #[cfg(feature = "autodream")]
+        if autodream::foreground_busy(world, agent) {
+            if tool.is_some() {
+                decide(
+                    world,
+                    call,
+                    ToolResult::skipped(
+                        "not_run: Dream yielded at a tool boundary to foreground work",
+                    )
+                    .into(),
+                );
+            } else {
+                continue;
+            }
+        }
         let Some(task_id) = state.active.clone() else {
             continue;
         };
@@ -788,6 +821,8 @@ fn gate(world: &mut World) {
             .any(|t| !t.delivered && t.status == Status::Queued);
         #[cfg(feature = "wake")]
         let pending = pending || wake::pending(&state);
+        #[cfg(feature = "autodream")]
+        let pending = pending || autodream::jobs::pending(&state);
         let changing = state
             .control
             .as_ref()
@@ -948,6 +983,12 @@ fn gate(world: &mut World) {
                 outcome: None,
                 published: false,
                 resolution: None,
+                #[cfg(feature = "autodream")]
+                publication: world
+                    .get::<vivy_python::managed::PinnedCall>(call)
+                    .and_then(|p| p.publication.clone()),
+                #[cfg(feature = "autodream")]
+                usage: vec![],
             });
             state.bump();
             world.entity_mut(call).insert(Bound {
@@ -1031,6 +1072,10 @@ fn capture(world: &mut World) {
             outcome: None,
             published: false,
             resolution: None,
+            #[cfg(feature = "autodream")]
+            publication: None,
+            #[cfg(feature = "autodream")]
+            usage: vec![],
         });
         state.bump();
         drop(state);
@@ -1052,6 +1097,11 @@ fn capture(world: &mut World) {
         .map(|(e, of, v, b, t)| (e, of.0, v.value().clone(), b.cloned(), t.cloned()))
         .collect();
     for (call, agent, value, bound, turn) in results {
+        #[cfg(feature = "autodream")]
+        let usage = world
+            .get::<vivy_python::managed::PinnedCall>(call)
+            .map(|p| p.usage.lock().unwrap_or_else(|e| e.into_inner()).clone())
+            .unwrap_or_default();
         let retry_at = world.get::<RetryVerdict>(call).and_then(|r| match &r.0 {
             rig_harness::rig_ecs::retry::Verdict::Retry(delay) => {
                 Some(now_ms() + delay.as_millis() as u64)
@@ -1072,6 +1122,10 @@ fn capture(world: &mut World) {
                         op.retry_at_ms = retry_at.unwrap_or(0);
                     }
                     op.outcome = Some(value);
+                    #[cfg(feature = "autodream")]
+                    {
+                        op.usage = usage;
+                    }
                     if op.phase != "unknown" {
                         op.phase = "settled".into();
                     }
@@ -1115,6 +1169,10 @@ fn acknowledge(world: &mut World) {
         if bound.is_some() {
             #[cfg(feature = "wake")]
             if !wake::accepted(world, agent) {
+                continue;
+            }
+            #[cfg(feature = "autodream")]
+            if !autodream::jobs::accepted(world, agent) {
                 continue;
             }
             let pending: Vec<_> = world
@@ -1512,6 +1570,15 @@ fn is_waiting(status: &Status) -> bool {
 }
 
 fn can_continue(state: &DurableAgentState, task: &str) -> bool {
+    #[cfg(feature = "autodream")]
+    if state
+        .evolution
+        .jobs
+        .iter()
+        .any(|j| j.task == task && j.notice_step.is_some() && j.delivered.is_none() && !j.skipped)
+    {
+        return false;
+    }
     #[cfg(feature = "wake")]
     {
         !state
@@ -1574,6 +1641,22 @@ fn probe(event: &str, state: &DurableAgentState) {
     };
     #[cfg(feature = "wake")]
     let stage = wake_stage.map(str::to_owned).unwrap_or(stage);
+    #[cfg(feature = "autodream")]
+    let stage = if event == "dream_activated" {
+        "after_activation".into()
+    } else if let Some(job) = state.evolution.jobs.last() {
+        match (event, job.phase.as_str()) {
+            ("committed", "admitted") => "after_job_admission".into(),
+            ("committed", "dispatched") => "after_job_dispatch".into(),
+            ("committed", "validated") => "after_job_validation".into(),
+            ("committed", "publishing") => "after_adoption_intent".into(),
+            ("committed", "published") if job.delivered.is_some() => "after_job_delivery".into(),
+            ("committed", "published") => "after_adoption_receipt".into(),
+            _ => stage,
+        }
+    } else {
+        stage
+    };
     let pause = !stage.is_empty() && std::env::var("VIVY_DURABLE_PAUSE").is_ok_and(|s| s == stage);
     let result = (|| -> io::Result<()> {
         let mut file = std::fs::OpenOptions::new()

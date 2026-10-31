@@ -3482,8 +3482,10 @@ dependencies = [
  "bevy_ecs",
  "futures",
  "rig-harness",
+ "rig-memory",
  "serde",
  "serde_json",
+ "toml",
  "vivy-basics",
  "vivy-process",
 ]

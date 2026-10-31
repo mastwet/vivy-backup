@@ -34,6 +34,10 @@ const SOURCES: &[(&str, &str)] = &[
         include_str!("../python/vivy_workbench/__init__.py"),
     ),
     ("repl.py", include_str!("../python/vivy_workbench/repl.py")),
+    (
+        "validation.py",
+        include_str!("../python/vivy_workbench/validation.py"),
+    ),
     ("mcp.py", include_str!("../python/vivy_workbench/mcp.py")),
     (
         "errors.py",
@@ -83,6 +87,7 @@ struct Pending {
     path: PathBuf,
     bytes: usize,
     live: Option<Live>,
+    usage: Arc<Mutex<Vec<Value>>>,
 }
 
 fn send(input: &Input, value: Value) -> Result<(), String> {
@@ -157,6 +162,23 @@ impl Worker {
             File::create(directory.join("events.jsonl")).map_err(|e| e.to_string())?;
         let executable = super::management::prepared_python(&root)?
             .unwrap_or_else(|| settings.executable.clone());
+        let skills = settings.skills.clone();
+        #[cfg(feature = "managed-skills")]
+        let (executable, skills) = if let Some(selected) = &settings.selected {
+            let executable = selected.executable().map_err(|e| e.to_string())?.to_owned();
+            let mut rows = selected.manifest["skills"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            for skill in selected.skills().map_err(|e| e.to_string())? {
+                let mut row = serde_json::to_value(skill).map_err(|e| e.to_string())?;
+                row["publication"] = json!(selected.id);
+                rows.push(row);
+            }
+            (executable, json!(rows))
+        } else {
+            (executable, skills)
+        };
         let mut command = vivy_process::command(&executable);
         let bootstrap = format!(
             "import sys;sys.path.insert(0,{});from vivy_workbench.repl import main;main()",
@@ -166,21 +188,36 @@ impl Worker {
             .args(["-I", "-u", "-c", &bootstrap])
             .current_dir(dir)
             .env("VIVY_WORKBENCH_ARTIFACTS", &directory)
-            .env("VIVY_WORKBENCH_SKILLS", settings.skills.to_string())
+            .env("VIVY_WORKBENCH_SKILLS", skills.to_string())
             .env("TMP", &temporary)
             .env("TEMP", &temporary)
             .env("SQLITE_TMPDIR", &temporary)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        if settings.memory {
-            command.env(
-                "VIVY_WORKBENCH_MEMORY_ROOT",
-                settings
-                    .memory_root
-                    .clone()
-                    .unwrap_or_else(|| root.join("native-memory")),
-            );
+        let memory_root = settings.memory.then(|| {
+            settings
+                .memory_root
+                .clone()
+                .unwrap_or_else(|| root.join("native-memory"))
+        });
+        #[cfg(feature = "managed-skills")]
+        let memory_root = if let Some(selected) = &settings.selected {
+            if selected.manifest["memory_ready"] == true {
+                Some(PathBuf::from(
+                    selected.manifest["memory_root"]
+                        .as_str()
+                        .filter(|s| !s.is_empty())
+                        .ok_or("Selected publication has no validated native memory root")?,
+                ))
+            } else {
+                None
+            }
+        } else {
+            memory_root
+        };
+        if let Some(memory_root) = memory_root {
+            command.env("VIVY_WORKBENCH_MEMORY_ROOT", memory_root);
         } else {
             command.env_remove("VIVY_WORKBENCH_MEMORY_ROOT");
         }
@@ -257,6 +294,14 @@ impl Worker {
                     // Raw fd/thread output has unknown ownership: retain it in the journal only.
                     // Late output retains its old request ID and cannot enter the new call.
                     if event["id"].as_str() != Some(&call.id) {
+                        continue;
+                    }
+                    if kind == "skill_usage" {
+                        let mut usage = call.usage.lock().unwrap_or_else(|e| e.into_inner());
+                        if usage.len() >= 1024 {
+                            return Err("managed usage evidence exceeded 1024 entries in one call; full journal retained".into());
+                        }
+                        usage.push(event["data"].clone());
                         continue;
                     }
                     if kind == "done" {
@@ -346,6 +391,7 @@ impl Worker {
         timeout: Duration,
         live: Option<&Live>,
         cancellation: &Cancellation,
+        usage: Arc<Mutex<Vec<Value>>>,
     ) -> Reply {
         if let Some(error) = self
             .failure
@@ -375,6 +421,7 @@ impl Worker {
             path,
             bytes: 0,
             live: live.cloned(),
+            usage,
         });
         request["id"] = json!(id);
         send(&self.input, request)?;

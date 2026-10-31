@@ -1,7 +1,7 @@
-# D3 assistant waiting/wake validation. Requires the local Rig checkpoint fork:
+# D4 assistant AutoDream validation. Requires the local Rig checkpoint fork:
 # vivy build recipes/persistent-agent.yaml --rig-path <rig-checkout>
 # vivy run recipes/persistent-agent.yaml --rig-path <rig-checkout> -- -p "hello"
-# New D3 sessions only; preserve D1/D2 sessions and executables. No native delegation,
+# New D4 sessions only; preserve D1/D2/D3 sessions and executables. No native delegation,
 # coding-session management, compaction or history-mutation plugins are selected.
 name: persistent-agent
 rig:
@@ -110,4 +110,4 @@ components:
     path: ../plugins/vivy-durable
     plugins: [vivy_durable::DurablePlugin, vivy_durable::AssistantContextPlugin]
     features:
-      vivy-durable: [wake]
+      vivy-durable: [autodream]

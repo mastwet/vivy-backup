@@ -2,9 +2,9 @@
 use super::*;
 use std::path::Path;
 use vivy_basics::skills::{TrustedSkillInventory, refresh_inventory};
-mod initialization;
+pub(super) mod initialization;
 mod status;
-mod toolchain;
+pub(super) mod toolchain;
 
 const CORE: &str = include_str!("../requirements-core.lock");
 const MEMORY: &str = include_str!("../requirements-memory.lock");
@@ -70,6 +70,31 @@ pub(super) fn prepared_python(root: &Path) -> Result<Option<String>, String> {
 
 fn command(In(args): In<CommandArgs>, world: &mut World) {
     let action = args.args.trim();
+    #[cfg(feature = "managed-skills")]
+    if action.starts_with("rollback ") {
+        let fields: Vec<_> = action.split_whitespace().collect();
+        let result = (|| -> std::io::Result<crate::managed::Publication> {
+            if fields.len() != 3 {
+                return Err(std::io::Error::other(
+                    "Use /python rollback <expected-publication> <retained-target>",
+                ));
+            }
+            let store = crate::managed::PublicationStore::new(
+                &world.resource::<ProjectRoot>().0,
+                RigHome::of(world).root(),
+            );
+            let update = format!(
+                "rollback:{}",
+                vivy_basics::setup::fingerprint(format!("{}:{}", fields[1], fields[2]).as_bytes())
+            );
+            store.rollback(fields[1], fields[2], &update)
+        })();
+        world.write_message(match result {
+            Ok(p)=>Notice::info(args.agent,format!("Rollback published {}. Newly planned calls use the retained code/environment; worker variables reset at adoption.",p.id)),
+            Err(e)=>Notice::error(args.agent,format!("Rollback failed: {e}")),
+        });
+        return;
+    }
     if matches!(action, "reset" | "close" | "prepare" | "status" | "") {
         let mut jobs = world.resource_mut::<Preparations>();
         jobs.2 = jobs.2.wrapping_add(1);
@@ -131,6 +156,39 @@ fn start_preparation(world: &mut World, agent: Entity) {
     }
     let mut settings = world.resource::<PythonSettings>().clone();
     settings.skills = skill_metadata(world.get_resource::<TrustedSkillInventory>());
+    #[cfg(feature = "managed-skills")]
+    {
+        settings.managed_requirements = crate::managed::preparation::requirements(world);
+        settings.stage_only = world
+            .get_resource::<crate::managed::PendingRequirements>()
+            .is_some_and(|p| !p.0.is_empty());
+        let store = crate::managed::PublicationStore::new(&root, RigHome::of(world).root());
+        settings.selected = if store.root().join("current.json").exists() {
+            match store.current() {
+                Ok(base) => Some(base),
+                Err(error) => {
+                    let cause = format!(
+                        "Cannot prepare over an invalid or untrusted publication: {error}. Restore its validated manifest/local setup record before retrying."
+                    );
+                    world
+                        .resource_mut::<initialization::Initialization>()
+                        .complete(false, Err(cause.clone()), false);
+                    world.write_message(Notice::error(agent, cause));
+                    return;
+                }
+            }
+        } else {
+            None
+        };
+        if let Some(published) = world.get_resource::<vivy_basics::skills::PublishedSkills>() {
+            settings.skills.as_array_mut().unwrap().retain(|row| {
+                !published
+                    .0
+                    .iter()
+                    .any(|s| row["file"].as_str() == s.file.to_str())
+            });
+        }
+    }
     let cancel = Arc::<Cancellation>::default();
     let token = cancel.clone();
     let (sender, receiver) = mpsc::channel();
@@ -191,8 +249,20 @@ fn prepare(
         .memory_root
         .clone()
         .unwrap_or_else(|| root.join("native-memory"));
+    #[cfg(not(feature = "managed-skills"))]
+    let extra = String::new();
+    #[cfg(feature = "managed-skills")]
+    let extra = format!(
+        ",managed_requirements=json.loads({}),publish={}",
+        json!(json!(settings.managed_requirements).to_string()),
+        if settings.selected.is_some() {
+            "False"
+        } else {
+            "True"
+        }
+    );
     let code = format!(
-        "import sys,os,json;sys.path.insert(0,{});from vivy_workbench.prepare import prepare;prepare({}, {}, python=sys.executable, skills=json.loads(os.environ['VIVY_WORKBENCH_SKILLS']), native_memory={}, memory_root={},scope={},uv={},reuse={})",
+        "import sys,os,json;sys.path.insert(0,{});from vivy_workbench.prepare import prepare;print(json.dumps(prepare({}, {}, python=sys.executable, skills=json.loads(os.environ['VIVY_WORKBENCH_SKILLS']), native_memory={}, memory_root={},scope={},uv={},reuse={}{})))",
         json!(source),
         json!(root),
         json!(lock),
@@ -200,7 +270,8 @@ fn prepare(
         json!(memory_root),
         json!(scope),
         json!(uv),
-        if reuse { "True" } else { "False" }
+        if reuse { "True" } else { "False" },
+        extra
     );
     let mut command = vivy_process::command(&python);
     // Preparation is noninteractive. Inheriting stdin can block spawning while
@@ -212,7 +283,18 @@ fn prepare(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    toolchain::run(&mut command, cancel, progress, 1800)?;
+    let manifest = toolchain::run(&mut command, cancel, progress, 1800)?;
+    #[cfg(feature = "managed-skills")]
+    if let Some(base) = &settings.selected {
+        return crate::managed::preparation::finish(
+            &crate::managed::PublicationStore::new(dir, home),
+            base,
+            manifest,
+            settings.stage_only,
+            cancel,
+        );
+    }
+    let _ = manifest;
     Ok(
         "Python environment prepared and validated. The next cell adopts it with fresh variables."
             .into(),

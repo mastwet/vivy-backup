@@ -1115,7 +1115,8 @@ def main() -> None:
     threading.Thread(target=_read_requests, args=(stdin_fd, queue), daemon=True).start()
 
     from .capabilities import bootstrap, memory_status
-    inventory = bootstrap(user_module.__dict__, json.loads(os.environ.get('VIVY_WORKBENCH_SKILLS', '[]')))
+    inventory = bootstrap(user_module.__dict__, json.loads(os.environ.get('VIVY_WORKBENCH_SKILLS', '[]')),
+                          usage=lambda record: _send({'event':'skill_usage', 'id':_current_cell.get(), 'data':record}))
     _send({"event": "ready", "protocol": PROTOCOL_VERSION, "python": platform.python_version(), "skills": inventory, "memory": memory_status(user_module.__dict__)})
 
     _serve_task = _loop.create_task(_serve(queue, user_module.__dict__))

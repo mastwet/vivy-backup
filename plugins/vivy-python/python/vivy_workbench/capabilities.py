@@ -5,24 +5,54 @@ import os
 import importlib.util
 from pathlib import Path
 import tomllib
+import inspect
+import sys
 
 RESERVED = {'workbench', 'mcp', 'memory', 'asyncio', '__builtins__', '_'}
 HOST_HANDLERS = {'mcp.config', 'mcp.list_connections'}
 
 
 class CallableSkill:
-    def __init__(self, module):
+    def __init__(self, module, record=None, usage=None):
         self.module = module
         self.__doc__ = module.run.__doc__
+        self.__signature__ = inspect.signature(module.run)
+        self.record = record
+        self.usage = usage
+
+    def _observe(self, outcome, value):
+        if self.record is not None and self.usage is not None:
+            try:
+                text = repr(value)[:4096]
+            except BaseException:
+                text = '<unrepresentable result>'
+            self.usage(dict(name=self.record['name'], revision=self.record['revision'],
+                            publication=self.record.get('publication'), outcome=outcome, result=text))
 
     def __call__(self, *args, **kwargs):
-        return self.module.run(*args, **kwargs)
+        if inspect.iscoroutinefunction(self.module.run):
+            async def invoke():
+                try:
+                    value = await self.module.run(*args, **kwargs)
+                except BaseException as exc:
+                    self._observe('error', exc)
+                    raise
+                self._observe('ok', value)
+                return value
+            return invoke()
+        try:
+            value = self.module.run(*args, **kwargs)
+        except BaseException as exc:
+            self._observe('error', exc)
+            raise
+        self._observe('ok', value)
+        return value
 
     def __getattr__(self, name):
         return getattr(self.module, name)
 
 
-def load(skills, namespace):
+def load(skills, namespace, usage=None):
     inventory = []
     for skill in skills:
         record = dict(skill, state='instructions')
@@ -40,8 +70,23 @@ def load(skills, namespace):
                 raise ValueError(f'Unavailable or reserved binding: {binding}')
             if set(options.get('requires_host', [])) - HOST_HANDLERS:
                 raise ValueError('Skill requires an unavailable host handler')
+            managed = bool(skill.get('revision'))
+            source = metadata.parent / 'src'
+            if managed:
+                sys.path.insert(0, str(source))
             module = importlib.import_module(name)
-            namespace[binding] = CallableSkill(module) if callable(getattr(module, 'run', None)) else module
+            if managed:
+                origin = Path(module.__file__).resolve()
+                if not origin.is_relative_to(source.resolve()):
+                    raise ValueError(f'Module origin does not match frozen Skill: {origin}')
+                for imported_name, imported in list(sys.modules.items()):
+                    if imported_name.startswith(name + '.'):
+                        origin = getattr(imported, '__file__', None)
+                        if origin is None or not Path(origin).resolve().is_relative_to(source.resolve()):
+                            raise ValueError(f'Submodule origin does not match frozen Skill: {imported_name}')
+                if not callable(getattr(module, 'run', None)):
+                    raise ValueError('Managed Skill must expose a callable run entry point')
+            namespace[binding] = CallableSkill(module, record if managed else None, usage) if callable(getattr(module, 'run', None)) else module
             record.update(state='ready', binding=binding, module=name)
         except Exception as exc:
             # Broken trusted code must not hide the remaining usable capabilities.
@@ -84,7 +129,7 @@ def memory_status(namespace):
         return 'error'
 
 
-def bootstrap(namespace, skills):
+def bootstrap(namespace, skills, usage=None):
     from . import mcp
     import asyncio
     namespace.update(mcp=mcp, asyncio=asyncio)
@@ -98,6 +143,6 @@ def bootstrap(namespace, skills):
             namespace['workbench'].readiness['memory'] = 'ready'
         except Exception as exc:
             namespace['workbench'].readiness['memory'] = f'{type(exc).__name__}: {str(exc)[:512]}'
-    inventory = load(skills, namespace)
+    inventory = load(skills, namespace, usage=usage)
     namespace['workbench']._inventory = inventory
     return inventory

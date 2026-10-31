@@ -67,7 +67,7 @@ pub(super) fn install(app: &mut App) {
         },
     );
 }
-pub(super) fn scope(world: &World) -> String {
+pub(crate) fn scope(world: &World) -> String {
     let settings = world.resource::<PythonSettings>();
     let skills = skill_metadata(world.get_resource::<TrustedSkillInventory>());
     let mut bytes = Vec::from(if settings.memory {
@@ -84,6 +84,13 @@ pub(super) fn scope(world: &World) -> String {
     );
     for row in skills.as_array().into_iter().flatten() {
         if let Some(file) = row["file"].as_str() {
+            #[cfg(feature = "managed-skills")]
+            if world
+                .get_resource::<vivy_basics::skills::PublishedSkills>()
+                .is_some_and(|p| p.0.iter().any(|s| s.file == Path::new(file)))
+            {
+                continue;
+            }
             let path = Path::new(file)
                 .parent()
                 .unwrap_or(Path::new(file))
@@ -92,6 +99,13 @@ pub(super) fn scope(world: &World) -> String {
                 bytes.extend_from_slice(path.to_string_lossy().as_bytes());
                 bytes.extend(content);
             }
+        }
+    }
+    #[cfg(feature = "managed-skills")]
+    {
+        let dependencies = crate::managed::preparation::requirements(world);
+        if !dependencies.is_empty() {
+            bytes.extend(serde_json::to_vec(&dependencies).expect("dependency strings"));
         }
     }
     setup::fingerprint(&bytes)
@@ -125,7 +139,11 @@ pub(super) fn publication_identity(root: &Path) -> Option<String> {
 pub(super) fn report(world: &World, _: Entity) -> Report {
     let init = world.resource::<Initialization>();
     let mut report = init.report.clone();
-    report.scope = init.scope.clone();
+    report.scope = if init.scope.is_empty() {
+        scope(world)
+    } else {
+        init.scope.clone()
+    };
     if !init.checked {
         report.phase = Some("checking".into());
     }
@@ -149,7 +167,7 @@ fn memory_report(world: &World, agent: Entity) -> Report {
 pub(super) fn managed(world: &World) -> bool {
     world.resource::<Initialization>().managed
 }
-pub(super) fn refresh(world: &mut World) {
+pub(crate) fn refresh(world: &mut World) {
     let mut init = world.resource_mut::<Initialization>();
     init.checked = false;
     init.scope.clear();
@@ -243,6 +261,15 @@ pub(super) fn tick(world: &mut World) {
         let approved_environment = setup::decision(world, "python")
             .ok()
             .and_then(|d| d.environment);
+        #[cfg(feature = "managed-skills")]
+        let approved_environment = crate::managed::PublicationStore::new(
+            &world.resource::<ProjectRoot>().0,
+            RigHome::of(world).root(),
+        )
+        .current()
+        .ok()
+        .map(|p| p.id)
+        .or(approved_environment);
         let cancel = Arc::<Cancellation>::default();
         let token = cancel.clone();
         let stage = Arc::new(Mutex::new("checking".into()));
@@ -347,6 +374,19 @@ fn detect(
 fn open_python(world: &mut World, agent: Entity) {
     open(world, agent, false);
 }
+#[cfg(feature = "managed-skills")]
+pub(crate) fn retain_before_approval(world: &World) -> Result<(), String> {
+    let store = crate::managed::PublicationStore::new(
+        &world.resource::<ProjectRoot>().0,
+        RigHome::of(world).root(),
+    );
+    if store.root().join("current.json").exists() {
+        store.retain_current().map_err(|e| {
+            format!("Cannot retain the current publication before changing setup scope: {e}")
+        })?;
+    }
+    Ok(())
+}
 fn open_memory(world: &mut World, agent: Entity) {
     open(world, agent, true);
 }
@@ -374,6 +414,8 @@ fn open(world: &mut World, agent: Entity, memory: bool) {
                 let result = (|| -> Result<(), String> {
                     let mut decision = setup::decision(world, key)?;
                     if matches!(choice, Some(0 | 1)) {
+                        #[cfg(feature = "managed-skills")]
+                        retain_before_approval(world)?;
                         if memory {
                             if !world.resource::<PythonSettings>().memory {
                                 let mut init = world.resource_mut::<Initialization>();

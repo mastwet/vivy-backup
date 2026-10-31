@@ -11,6 +11,50 @@ sys.path.insert(0, str(Path(__file__).parents[1] / 'python'))
 
 
 class CapabilityTests(unittest.TestCase):
+    def test_managed_binding_uses_frozen_origin_and_reports_actual_result(self):
+        from vivy_workbench import capabilities
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / 'src' / 'managed_fixture'
+            source.mkdir(parents=True)
+            (source / '__init__.py').write_text('def run(value): return value + 7\n', encoding='utf-8')
+            (root / 'pyproject.toml').write_text('[project]\nname="managed_fixture"\nversion="0.1"\n', encoding='utf-8')
+            (root / 'SKILL.md').write_text('frozen instructions', encoding='utf-8')
+            row = {'name':'managed_fixture', 'file':str(root/'SKILL.md'), 'revision':'revision-one', 'publication':'publication-one'}
+            events = []
+            namespace = {}
+            try:
+                inventory = capabilities.load([row], namespace, usage=events.append)
+                self.assertEqual(inventory[0]['state'], 'ready')
+                self.assertEqual(namespace['managed_fixture'](3), 10)
+                self.assertEqual(events[0]['revision'], 'revision-one')
+                self.assertEqual(events[0]['publication'], 'publication-one')
+                self.assertEqual(events[0]['result'], '10')
+                self.assertEqual(events[0]['outcome'], 'ok')
+                import inspect
+                self.assertEqual(str(inspect.signature(namespace['managed_fixture'])), '(value)')
+            finally:
+                sys.modules.pop('managed_fixture',None)
+                while str(root/'src') in sys.path: sys.path.remove(str(root/'src'))
+
+    def test_managed_import_cannot_silently_reuse_an_old_module(self):
+        from vivy_workbench import capabilities
+        import types
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root/'src'/'old_fixture').mkdir(parents=True)
+            (root/'src'/'old_fixture'/'__init__.py').write_text('def run(): return "new"',encoding='utf-8')
+            (root/'pyproject.toml').write_text('[project]\nname="old_fixture"\nversion="0.1"\n',encoding='utf-8')
+            old = types.ModuleType('old_fixture')
+            old.__file__ = str(root/'old.py')
+            old.run = lambda: 'old'
+            with patch.dict(sys.modules, {'old_fixture':old}):
+                namespace = {}
+                records = capabilities.load([{'name':'old_fixture','file':str(root/'SKILL.md'),'revision':'new'}],namespace)
+                self.assertEqual(records[0]['state'],'unavailable')
+                self.assertNotIn('old_fixture',namespace)
+            while str(root/'src') in sys.path: sys.path.remove(str(root/'src'))
+
     def test_memory_status_reports_actual_binding_and_close_without_a_probe(self):
         from vivy_workbench.capabilities import memory_status
         from vivy_workbench.memory import Memory

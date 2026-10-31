@@ -428,6 +428,8 @@ fn tick(world: &mut World) {
         let auto = world
             .get_resource::<Cli>()
             .is_none_or(|c| !matches!(c.front(), Some("print" | "json")));
+        #[cfg(feature = "autodream")]
+        let auto = auto && !durable.evolution.dream;
         if !foreground
             && !context
                 .jobs

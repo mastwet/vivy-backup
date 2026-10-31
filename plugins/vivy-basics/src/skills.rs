@@ -4,7 +4,8 @@
 //! the project is trusted ([`crate::trust`]).
 
 use bevy_log::warn;
-use rig_basics::skills::{Skill, discover, message, roots};
+pub use rig_basics::skills::Skill;
+use rig_basics::skills::{discover, message, roots};
 use rig_harness::prelude::*;
 
 /// Skills from the trusted places only.
@@ -14,6 +15,13 @@ pub struct TrustedSkillsPlugin;
 /// One trusted discovery result, shared with optional capability consumers.
 #[derive(Resource, Default, Clone)]
 pub struct TrustedSkillInventory(pub Vec<Skill>);
+/// Derived from a validated workbench publication, never an independent catalog.
+#[derive(Resource, Default, Clone)]
+pub struct PublishedSkills(pub Vec<Skill>);
+#[derive(Resource, Default)]
+pub struct SkillCollisions(pub Vec<String>);
+#[derive(Component)]
+struct SkillCommand;
 
 /// Refresh through the same discovery and trust policy used by the skills prompt.
 pub fn refresh_inventory(world: &mut World) {
@@ -23,9 +31,27 @@ pub fn refresh_inventory(world: &mut World) {
         .into_iter()
         .filter(|place| crate::trust::allowed(world, place))
         .collect();
-    let (skills, problems) = discover(&places);
+    let (mut skills, problems) = discover(&places);
     for problem in problems {
         warn!("{problem}");
+    }
+    let mut collisions = vec![];
+    if let Some(published) = world.get_resource::<PublishedSkills>() {
+        for skill in &published.0 {
+            if skills
+                .iter()
+                .any(|s| s.name == skill.name && s.file != skill.file)
+            {
+                warn!(
+                    "Published Skill {} collides with ordinary discovery; it is unavailable",
+                    skill.name
+                );
+                collisions.push(skill.name.clone());
+                skills.retain(|s| s.name != skill.name);
+            } else if !skills.iter().any(|s| s.file == skill.file) {
+                skills.push(skill.clone());
+            }
+        }
     }
     let text = listing(&skills);
     for (name, mut section) in world.query::<(&Name, &mut PromptSection)>().iter_mut(world) {
@@ -34,12 +60,59 @@ pub fn refresh_inventory(world: &mut World) {
         }
     }
     world.insert_resource(TrustedSkillInventory(skills));
+    world.insert_resource(SkillCollisions(collisions));
+    refresh_commands(world);
+}
+
+fn refresh_commands(world: &mut World) {
+    let old: Vec<_> = world
+        .query_filtered::<Entity, With<SkillCommand>>()
+        .iter(world)
+        .collect();
+    for entity in old {
+        world.despawn(entity);
+    }
+    let skills = world.resource::<TrustedSkillInventory>().0.clone();
+    for skill in skills {
+        let name = skill.name.clone();
+        let id = world.register_system(move |In(args): In<CommandArgs>, world: &mut World| {
+            let result = world
+                .resource::<TrustedSkillInventory>()
+                .0
+                .iter()
+                .find(|s| s.name == name)
+                .ok_or_else(|| format!("Skill {name} is no longer available"))
+                .and_then(|skill| message(skill, &args.args));
+            match result {
+                Ok(text) => {
+                    let author = Author::user().titled(format!("skill {name}"));
+                    world.spawn((
+                        Incoming::new(text, args.mode).with_author(author),
+                        ForAgent(args.agent),
+                    ));
+                }
+                Err(why) => {
+                    world.write_message(Notice::error(args.agent, why));
+                }
+            }
+        });
+        world.entity_mut(id.entity()).insert((
+            Name::new(format!("/skill:{}", skill.name)),
+            rig_harness::commands::SlashCommand {
+                help: format!("Skill: {}", first_line(&skill.description)),
+            },
+            SkillCommand,
+        ));
+    }
 }
 
 impl Plugin for TrustedSkillsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ProjectRoot>()
             .init_resource::<TrustedSkillInventory>();
+        if !app.is_plugin_added::<rig_harness::commands::CommandPlugin>() {
+            app.add_plugins(rig_harness::commands::CommandPlugin);
+        }
     }
 
     fn finish(&self, app: &mut App) {
@@ -54,38 +127,11 @@ impl Plugin for TrustedSkillsPlugin {
                 listing(&skills),
             ),
         ));
-        for skill in skills {
-            let help = format!("Skill: {}", first_line(&skill.description));
-            let name = format!("skill:{}", skill.name);
-            app.add_command(
-                &name,
-                &help,
-                move |In(args): In<CommandArgs>,
-                      mut commands: Commands,
-                      mut notices: MessageWriter<Notice>| {
-                    match message(&skill, &args.args) {
-                        Ok(text) => {
-                            let author = Author::user().titled(format!("skill {}", skill.name));
-                            commands.spawn((
-                                Incoming::new(text, args.mode).with_author(author),
-                                ForAgent(args.agent),
-                            ));
-                        }
-                        Err(why) => {
-                            notices.write(Notice::error(
-                                args.agent,
-                                format!("Cannot read {}: {why}.", skill.file.display()),
-                            ));
-                        }
-                    }
-                },
-            );
-        }
     }
 }
 
 /// The prompt section listing the skills the model may pick, as Rig's.
-fn listing(skills: &[Skill]) -> String {
+pub fn listing(skills: &[Skill]) -> String {
     let entries: Vec<String> = skills
         .iter()
         .filter(|skill| !skill.manual)
@@ -125,3 +171,6 @@ fn first_line(text: &str) -> String {
         None => line.to_owned(),
     }
 }
+
+#[cfg(test)]
+mod tests;
