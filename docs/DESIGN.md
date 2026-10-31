@@ -1,5 +1,20 @@
 # Decisions and assembly direction
 
+## Agent-led behavior and minimal execution support (owner, 2026-10-31)
+
+Give the agent freedom to choose intentions and actions within the user's
+instructions and enabled capabilities. This includes whether to continue,
+defer, ask, remain silent, schedule a wake or leave an admitted activity.
+Keep the harness responsible for reliable execution: persistence, recovery,
+event delivery, cancellation and the configured resource limits. Behavioral
+choices belong to the agent; do not encode a mandatory daily routine or a
+separate policy engine for each activity into the execution core.
+
+Apply More, Fast, Good, Frugal by reusing the existing Rig execution path and
+small shared mechanisms. Add machinery only for an observed requirement. This
+principle also applies to AutoDream; it does not remove explicit user control,
+effect ownership or the checks required to preserve state integrity.
+
 ## Plan B: durable execution within the existing Rig chain (owner, 2026-10-31)
 
 **Status: selected architecture direction; the detailed design below remains
@@ -501,6 +516,15 @@ bindings must not fall back to `Entity` or the string `unsaved` as storage IDs.
 
 #### 8. Sleep, wake and host lifetime
 
+**Discussion checkpoint (2026-10-31): item 3 is settled at the architectural
+direction level; implementation and acceptance remain pending.** The agent
+chooses the next action, including waiting, while the host reliably delivers
+persisted wakeups. Ordinary handoff follows a single completed tool execution;
+explicit human immediate interruption remains available. The timer, checkpoint
+and deduplication details below are the engineering proposal, not verified
+runtime behavior. The next design discussion is item 4, AutoDream's evolution
+loop; the official inbox and general hooks remain deferred.
+
 **Owner decision (2026-10-31): idle autonomous activity is disabled by default
 and enabled on demand.** This default does not disable continuation of an
 explicitly admitted task. The owner also identifies a game-world digital
@@ -536,8 +560,9 @@ source references and selected evidence into its dedicated workspace. Source
 events, candidates, validation results and adoption receipts remain distinguishable;
 do not collect recalled material again as fresh experience by default.
 
-The first evolution slice handles persona candidates and reusable textual
-lessons. Candidates name base revisions and evidence. Validate schema, scope,
+The proposed first evolution slice handles persona candidates and reusable
+textual lessons; this narrower delivery scope remains open for discussion.
+Candidates name base revisions and evidence. Validate schema, scope,
 size, applicability and preservation of required constraints, then automatically
 apply valid candidates through Laputa or the memory owner. Reject or regenerate
 stale candidates. Routine per-candidate human approval is not an activation gate.

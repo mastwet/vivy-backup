@@ -1,5 +1,24 @@
 # Handoff: continue the independent assembly experiment
 
+## Agent-led principle and transition to AutoDream design (2026-10-31)
+
+The owner prioritizes agent freedom and More, Fast, Good, Frugal. The agent
+chooses intentions and actions; the harness supplies reliable execution,
+persistence, recovery, wake delivery, cancellation and configured resource
+limits. Avoid embedding prescribed behavior or activity-specific policy engines
+in the core. See DESIGN's agent-led principle.
+
+Discussion item 3, persistent sleep/wake, is settled at the architectural
+direction level. Implementation, exact integration details and runtime
+acceptance remain pending; this checkpoint is not a delivery claim. Move the
+discussion to item 4, AutoDream. Its existing decision already selects a
+dedicated workspace, a separate persona-free Dream context, artifact/persona
+candidates and automatic adoption without routine per-candidate human approval.
+Refine triggers, collection, effective-version handling and outcome feedback
+under the minimal-execution principle. The textual first-slice scope in the
+detailed proposal is still a proposal. No AutoDream implementation starts with
+this record; official inbox/general hooks remain deferred.
+
 ## Idle autonomy default and digital-resident research (2026-10-31)
 
 The owner selects idle autonomous activity off by default, enabled on demand,
