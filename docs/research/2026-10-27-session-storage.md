@@ -14,12 +14,12 @@ scope and dates. They inform the detailed storage contract; they do not select
 a separate engine or establish newly tested recovery guarantees. Consult HANDOFF
 for later workbench/native-memory implementation status.
 
-The owner's subsequent detailed-design request is covered by the
-[Plan B architecture proposal](../DESIGN.md#detailed-architecture-proposal-2026-10-31).
-It proposes receipt-gated Rig execution and a framed Store preserving logical
-Rig logs. The proposed commit/recovery contract and its unproven integration
-seams take precedence over provisional implementation suggestions below; this
-research does not constitute runtime validation or approval of those details.
+The owner's subsequent synthesis is covered by the
+[preliminary detailed baseline](../DESIGN.md#preliminary-detailed-architecture-baseline-2026-10-31).
+It specifies receipt-gated Rig execution, with a framed Store preserving logical
+Rig logs only as a conditional fallback after D0. The baseline's commit/recovery
+contract and explicitly unproven integration seams take precedence over older
+implementation suggestions below; this research is not runtime validation.
 
 ## Current upstream adoption assessment (2026-10-31)
 

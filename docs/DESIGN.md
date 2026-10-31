@@ -1,5 +1,84 @@
 # Decisions and assembly direction
 
+## Consolidated architecture baseline (2026-10-31)
+
+**Status: preliminary detailed architecture locked after synthesis and review.
+Implementation and runtime acceptance are pending.** The owner requested a final
+synthesis and review of the recent decisions, with coherent directions locked
+after review.
+This baseline and the current detailed contracts below take precedence over
+older dated proposals. Research remains evidence at its recorded revision;
+historical delivery records are not proof of the new behavior.
+
+The objective is a persistent agent that can execute, recover, remember, wait
+and improve its usable capabilities through one Vivy core. Validate through the
+existing coding face. Keep the agent free to choose its work; the host supplies
+reliable execution and explicit human control. Reuse working components before
+adding equivalents, and defer infrastructure without a concrete first consumer.
+
+| Area | Locked direction | First implementation boundary |
+| --- | --- | --- |
+| Assembly and execution | One Rust/Vivy core; YAML selects compiled components; Plan B extends the existing Rig model/tool chain. | A durable-enabled recipe using the coding face; retain the legacy recipe's behavior. |
+| Durability | Persist admissions, intents, outcomes and continuation state; unsafe uncertain effects are reconciled, not blindly replayed. | Rig primitives and bounded upstream fixes first; a private framed Store is conditional on D0 evidence. |
+| Agent control | Agent chooses continue/switch/defer/ask/silence; ordinary handoff follows one completed tool, human immediate stop remains available. | One foreground decision and serialized tools per agent; no general durable child joins yet. |
+| Persona | Laputa is the specification/governance boundary; one native workspace persona authority feeds the top-level persona block. | Small Rust integration; no Garden service or second identity store. |
+| Context | Rust/Rig owns effective context, Recap coverage/publication and compaction. | Existing coding policy; compact policy starts with committed Recap plus a bounded unsummarized tail and active task. |
+| Long-term memory | Full Python-native MemPalace remains authoritative, behind a replaceable consumer boundary. | Reuse remember/get/search and stable source/event identities; no new backend or mirrored memory database. |
+| Waiting | Saved one-shot deadlines; a live host delivers wakes; generic idle autonomy defaults off. | Explicitly admitted work may continue or schedule a wake; no daemon or general cron requirement. |
+| Evolution | AutoDream AD-2: separate Dream context, file revisions, host-owned background validation and automatic adoption. | Persona and executable Skill adoption, actual subsequent use and feedback; no mandatory reviewer or per-candidate approval. |
+| External abilities | PEN packages deliver complete capabilities; NeuroLink connects conversations/events and loads adapted channel packages. | Reuse compiled workbench/MCP/Skill support; these interfaces do not own an agent lifecycle. |
+| First integrations | Octos official QQ only; separate NapCat browsing through its existing data; Minecraft independent multiplayer companion first. | Adapter/API details and game backend remain separate integration decisions; client control is a retained second route. |
+| Delegation | Existing native Rig delegation remains the baseline; APIX/apixis may later provide optional library-level composition. | No second agent runtime, compulsory cross-language Rig bridge or durable graph engine. |
+| Product and later features | Product navigation/Diva packaging remain parked; official inbox/general hooks remain later-phase. | Neither is a prerequisite for internal task completion, wake delivery or AutoDream. |
+
+The compact-context default, local publication protocol and first job limits
+below are engineering choices made in this synthesis, not additional historical
+owner rulings. They can be refined by measured implementation evidence without
+reopening the selected ownership or execution model. Exact API spelling, type
+names, numeric bounds and directory names are implementation details; changes
+to authority, replay guarantees, automatic adoption or agent freedom are not.
+
+Read the [detailed execution contracts](#preliminary-detailed-architecture-baseline-2026-10-31)
+and [AD-2 integration contracts](#ad-2-integration-contracts) as the implementation
+design. The dated sections retain rationale and alternatives: Plan A/C and
+AD-1/AD-3 are not parallel implementation tracks. PEN/NeuroLink positions are
+locked, but their complete package/wire protocols are not frozen by this review.
+
+The existing code supplies recipe assembly, the Rig coding path, native bounded
+delegation, workbench/Skill/MCP execution and native MemPalace integration.
+Durable commit gates, native persona integration, assistant Recap/wake and AD-2
+publication are still to be built. D0 must prove the required Rig seams at a
+deliberately selected pin before the durable design is called implementable on
+that pin. No dependency upgrade or new upstream compatibility claim is made here.
+
+Implementation order is D0/D1 execution, D2 context/memory, D3 wake, then D4
+evolution. An external-integration lane may use proven execution/job boundaries
+without waiting for the inbox or for all of D4; Minecraft remains a possible
+priority of this phase, not an automatically postponed distant feature. Its
+edition, authentication, backend and concrete adventure acceptance must be
+settled for that lane, not for D0. Deterministic isolated implementation and
+verification can precede the deferred real-provider run; that run remains an
+explicit unpassed joint-acceptance gate, never waived by documentation or mocks.
+
+**Review outcome.** An independent builder review, followed by a focused recheck
+of the publication race and external-integration boundaries, found no important
+unanswered planning question. The synthesis resolves historical conflicts about
+separate engines, text-only evolution, private-Store-first delivery and repeated
+managed-Skill approval. It also specifies per-agent context ownership, internal
+job recovery, staged preparation, publication reconciliation and version-pinned
+calls. No new owner decision is needed to prepare the D0/D1 implementation plan.
+
+The review checked existing recipe wiring, prompt replacement, Skill discovery/
+binding, Python preparation/publication and worker replacement against these
+contracts. Current source does not yet provide the proposed durable gates or
+revision publisher. Remaining proof obligations are receipt-aware Rig scheduling,
+redacted outcome capture, resume-format detection, cancel/recovery ordering,
+Windows file durability and actual integrated provider behavior. D0 failure must
+produce a bounded upstream-gap decision, not a silent switch to Plan A/C or a
+claim of durable support. PEN wire/package schemas, game backend and product
+entry points remain outside this lock. Verification for this deliverable is
+documentation review and consistency checking, not a new runtime test.
+
 ## Agent-led behavior and minimal execution support (owner, 2026-10-31)
 
 Give the agent freedom to choose intentions and actions within the user's
@@ -17,8 +96,8 @@ effect ownership or the checks required to preserve state integrity.
 
 ## Plan B: durable execution within the existing Rig chain (owner, 2026-10-31)
 
-**Status: selected architecture direction; the detailed design below remains
-proposed except for explicitly accepted decisions, and implementation is pending.**
+**Status: selected architecture direction, consolidated into the preliminary
+detailed baseline above; implementation and runtime acceptance are pending.**
 The owner selects Plan B from the
 architecture alternatives. Complete one Vivy core by adding persistent execution
 phases, commit boundaries, recovery and sleep/wake behavior within the existing
@@ -93,7 +172,7 @@ The first acceptance slice is a model/tool task exercised through the current
 coding face, interrupted at selected phases and reopened: confirmed results are
 retained, uncertain actions are reported, and stale results cannot advance work.
 Then integrate persona/Recap/recall and a recoverable wakeup; AutoDream reuses the
-verified infrastructure. The proposal below details the state, storage and
+verified infrastructure. The baseline below details the state, storage and
 context contracts; exact APIs and implementation steps remain engineering work.
 This decision delivers no code or new runtime evidence and does not close
 deferred real-provider checks.
@@ -132,8 +211,10 @@ not by itself establish a persistent subject's Recap policy, cross-session
 continuity or the stronger durable commit guarantees required above. Begin by
 adapting summary prompts and retention policy, then add the necessary assistant
 update triggers and source/publication checks in the same execution chain.
-The exact trigger, Recap-only versus a bounded not-yet-summarized conversation
-tail, and any cross-session subject projection remain design choices.
+The synthesis below selects a bounded not-yet-summarized conversation tail for
+the initial compact policy. Numeric retention/trigger settings remain builder
+choices. Cross-session subject projection is deferred rather than implied by a
+shared persona or workspace.
 
 Do not outsource the complete context authority to Python or introduce a
 parallel Recap database. If a demonstrated need calls for Python-generated
@@ -146,11 +227,13 @@ AutoDream's separate context and automatic validated adoption remain unchanged.
 This records source inspection and an owner decision, not new runtime tests,
 implemented assistant Recap, a dependency upgrade or a measured cost reduction.
 
-### Detailed architecture proposal (2026-10-31)
+### Preliminary detailed architecture baseline (2026-10-31)
 
-The owner requested detailed design after selecting B. The requirements above
-are accepted; the concrete contracts below are engineering proposals, not new
-owner rulings or implemented guarantees. The goal is one recoverable execution
+The owner requested detailed design after selecting B and subsequently requested
+its consolidated review and initial lock. The contracts below define that
+preliminary implementation baseline; unproven Rig seams and the conditional
+Store fallback remain explicitly marked. They are not implemented guarantees.
+The goal is one recoverable execution
 chain through the current coding face, followed by context/memory, wake and
 evolution integration. Product navigation remains outside this design.
 
@@ -183,13 +266,16 @@ flowchart TD
     A[Existing coding face / host input] --> B[Durable admission and handoff]
     B --> C[Existing Rig model and tool execution]
     C --> D[Commit and recovery gates]
-    D --> E[DurableStore: Rig logs plus saved task state]
+    D --> E[Rig logs and saved state with verified commit receipts]
     E --> B
     F[Laputa persona + agent context / Recap] --> C
     C --> G[Existing Python workbench / MemPalace]
     H[Host timer] --> B
     I[AutoDream task with its own prompt] --> C
-    I --> F
+    I --> J[Host-owned validation job]
+    J --> K[Versioned publication through each state owner]
+    K --> F
+    K --> G
 ```
 
 The YAML recipe selects these compiled capabilities. A recipe without durable
@@ -208,6 +294,11 @@ switch. Kernel persistence can work without Python or a memory backend.
 | Python workbench / MemPalace | Worker resources and canonical long-term memory storage |
 | AutoDream workflow | Collection, candidate generation, validation and automatic adoption through the owners above |
 
+These are ownership boundaries, not a request for one framework/crate per row.
+Keep context policy beside its actual consumers, and use the existing
+`vivy-process` ownership primitive for external work. Internal completion
+delivery is a persisted task input; no generic event bus is needed first.
+
 #### 2. Identity, state and the minimum control surface
 
 Use the persisted Rig agent ID scoped by session ID as `AgentKey`; an ECS
@@ -216,6 +307,15 @@ Use the persisted Rig agent ID scoped by session ID as `AgentKey`; an ECS
 retain Rig tool-call/message IDs as mappings, not as substitutes for task
 identity. A retry has a new attempt while retaining the original logical step.
 Sessions created by fork receive fresh execution identities and no live timers.
+
+For this baseline, a workspace owns the persona, memory backend and published
+Skill set; a session owns execution logs; each agent owns its conversation,
+Recap, pending inputs and workbench namespace. Reopening the same durable
+agent preserves continuity. Starting a new coding session does not silently
+attach to another agent's current task or Recap. A cross-session persistent
+subject/menu is a deferred product concern, not a global Recap singleton.
+Task switches within an agent keep one ordered conversation with explicit
+active-task context; they do not swap in an uncommitted transcript.
 
 One `DurableAgentState` saved component under a stable schema key carries the
 agent's task records, ordered pending inputs, wake records and control revision.
@@ -231,7 +331,7 @@ Persist the deduplication data; process-local maps are insufficient.
 | Operation | ID, Rig call mapping, kind, frozen request or argument reference, handler identity/version, replay policy, phase, result/error reference |
 | Input | ID, source/request key, payload digest and content/reference, target, arrival order, disposition |
 | Wake | ID, target task or agent, deadline in UTC, generation, reason, pending/fired/cancelled state |
-| Context reference | Persona revision, Recap revision, conversation boundary and immutable evidence references used by a model operation |
+| Context reference | Persona revision, Recap revision, conversation boundary, selected Skill publication and immutable evidence references used by a model operation |
 
 Task statuses are `queued`, `running`, `waiting`, `suspended`, `completed`,
 `failed`, `cancelled`. Waiting means a saved deadline or an explicit dependency;
@@ -262,6 +362,12 @@ not an excuse to label existing in-memory delegation durable. Unsupported
 delegation in the first durable slice must fail before dispatch with a clear
 reason. Existing non-durable recipe behavior is preserved.
 
+Dream is a fixed internal agent context in this same core, with its own stable
+agent/task identities and explicit source references. It is not an invocation
+of the currently non-durable subagent join machinery. Admission of a Dream run
+does not make the originating coding task wait for it or depend on its success.
+This permits AD-2 without first implementing recoverable arbitrary agent trees.
+
 #### 3. Storage and the actual commit unit
 
 Reuse Rig's logical logs and saved components. First evaluate Rig's store and
@@ -274,7 +380,12 @@ an atomic write across an agent log, another agent log and the session log.
 Later joins refer to an already committed child's result before committing the
 parent's acceptance; an interrupted join is reconciled by identity.
 
-Proposed physical layout inside a newly created durable session:
+**Conditional fallback only:** the following framing/layout is selected only if
+D0 establishes that upstream storage plus a bounded extension cannot supply the
+required contract. The commit, ownership and recovery requirements also apply
+when upstream storage is reused directly.
+
+Fallback physical layout inside a newly created durable session:
 
 ```text
 durable/format.json       # format/schema identity, created before use
@@ -469,24 +580,35 @@ implemented by this queue. Later hooks submit the same typed inputs.
 
 #### 7. Persona, Recap and memory integration
 
-Proposed native persona storage is one versioned workspace `persona.json`, with
+The initial native persona representation is a versioned workspace
+`.vivy/laputa/persona.json`, with
 `schema_version`, `persona_id`, `revision`, `text`, `last_update_id` and source
 references. Laputa exposes read and compare-and-swap update operations. Updates
 validate the expected revision, write/sync a replacement, then atomically publish
 it under an OS writer lock. An interrupted update is reconciled by update ID and
 revision. Tasks record the observed revision, not a second mutable persona copy.
 The exact bytes used by an in-flight model request are part of its checkpoint.
+Keep immutable prior revisions for checked rollback, which creates a new
+revision. The current pointer/content is the only mutable persona authority.
 
 The model composer puts the persona block at the application's top-level
 persona position, with host/tool rules and project context explicitly composed.
-Existing trusted `SYSTEM.md` customization needs one defined composition point;
-it must not silently create another persona authority. Persona activates at the
+In the Laputa-enabled recipe, compose persona as the root persona block, then
+the base role/custom system prompt, host/tool instructions, trusted project
+context and the bounded working-context projection. "Top-level" describes
+placement, not permission to override host requirements or explicit user
+instructions. SYSTEM/CLI replacement changes the base role slot only; it cannot
+erase the managed persona block. Keep the existing non-Laputa recipe's prompt
+behavior. Dream's explicit role skips conversational persona injection, including
+persona-like appended content, while retaining applicable host/project
+requirements. Inspect actual requests to verify these distinctions after all
+composition/edit hooks. Persona activates at the
 next *new* model operation, never halfway through a request. A retry of an old
 operation uses its pinned context; deliberate replanning creates a new step.
 AutoDream uses its separate Dream prompt without the conversational persona.
 
 The accepted [Recap reuse decision](#recap-ownership-and-rig-reuse-owner-2026-10-31)
-governs implementation ownership here. The proposed Recap metadata is agent-owned
+governs implementation ownership here. The initial Recap metadata is agent-owned
 saved state: revision, covered conversation boundary, summary, current goal and
 evidence references, reusing Rig facilities rather than creating a parallel store.
 Update it only against the
@@ -495,6 +617,18 @@ tool-call/result pairs until closed. Keep the existing coding context/compaction
 policy as the initial policy. The mysoul-inspired compact policy can later use
 persona + committed Recap + active task + bounded selected evidence. These
 policies share an execution engine and must not create two Recap authorities.
+
+Engineering default for the first compact policy: keep committed Recap plus a
+bounded, chronological unsummarized tail, active task and explicitly selected
+evidence. This retains source detail cheaply while reusing Rig's pair-aware cuts;
+Recap-only is not a prerequisite. Reuse context-pressure/manual compaction and
+consider a checkpoint refresh at durable completion/wait when uncovered material
+warrants it. Coalesce requests against one source boundary. If refresh fails, retain
+the old Recap and its uncovered tail; never advance coverage or discard evidence
+because a summary was merely requested. If the resulting request still exceeds
+budget, suspend it with a cause. A committed coding outcome need not be undone
+by a failed maintenance summary. There is no separate summary model call on
+every timer event or tool result.
 
 Keep MemPalace's existing `remember/get/search` API. Start with explicit bounded
 recall and explicit useful memory writes; neither every token nor every turn
@@ -521,9 +655,9 @@ direction level; implementation and acceptance remain pending.** The agent
 chooses the next action, including waiting, while the host reliably delivers
 persisted wakeups. Ordinary handoff follows a single completed tool execution;
 explicit human immediate interruption remains available. The timer, checkpoint
-and deduplication details below are the engineering proposal, not verified
-runtime behavior. The next design discussion is item 4, AutoDream's evolution
-loop; the official inbox and general hooks remain deferred.
+and deduplication details below are part of the preliminary baseline, not
+verified runtime behavior. AutoDream's subsequent AD-2 decision closes item 4 at
+the architecture level; official inbox/general hooks stay deferred.
 
 **Owner decision (2026-10-31): idle autonomous activity is disabled by default
 and enabled on demand.** This default does not disable continuation of an
@@ -590,8 +724,9 @@ useful donors, but its refinement rollback restores harness entries rather than
 Skill package files. Prefer small adaptations over importing pa-core's session
 engine or adding a second runtime. Validation failure leaves the active revision
 in place and returns the evidence to Dream. AD-2 is the selected architecture;
-exact interfaces and recovery details remain design work. No implemented
-publisher or measured improvement in agent quality is claimed.
+the AD-2 integration contracts below specify initial publication and recovery.
+Exact API names remain builder choices. No implemented publisher or measured
+improvement in agent quality is claimed.
 
 #### 10. Compatibility, acceptance and remaining engineering choices
 
@@ -626,7 +761,7 @@ integration a prerequisite for D0.
 Before implementation, the builder must verify the D0 seams, choose exact
 serialization/helper libraries compatible with the pinned Rust toolchain, and
 specify bounded payload/queue/budget defaults with errors. Those are engineering
-choices within this proposal. API naming, module splits and future indexing are
+choices within this baseline. API naming, module splits and future indexing are
 not user-facing architectural decisions. The source-level risks still requiring
 proof are receipt-aware scheduling, final-outcome capture after redaction,
 model-result recovery, cancellation ordering, and durable-format detection in
@@ -687,7 +822,7 @@ old Go MemoryPort/REST design.
 | Concern | Selected responsibility |
 | --- | --- |
 | Persona | The Vivy-side Laputa implementation manages one authoritative persona source, exposes controlled read/update operations, and supplies the persona layer of model context. |
-| Persona injection | Persona is the root persona block in the application's top-level prompt composition. The actual host assembles the request; storing data or editing a file alone does not prove the model received it. Exact fields, format, size and refresh boundary remain open. |
+| Persona injection | Persona is the root persona block in the application's top-level prompt composition. The native baseline above defines initial version fields and activation at a new model operation; actual requests must prove injection. Size limits and host-specific APIs remain builder choices. |
 | Short-term Recap / ACTMEM | The agent/harness owns its working-context engine, persistence and compaction. Laputa describes the ownership/integration boundary; it does not introduce a second Recap engine or require Garden's ACTMEM file. Coding and durable retain their separate context policies. |
 | Long-term memory | The current implementation remains the full Python-native MemPalace integration. The architecture should permit a later replacement backend, such as Mem0, without moving persona or task-state authority into that backend. No replacement adapter or data migration is selected now. |
 | Evolution | Vivy's AutoDream closes its own collection-to-adoption workflow. Reusable Garden workflows may serve other hosts; running Garden is not a prerequisite for Vivy evolution. |
@@ -730,8 +865,8 @@ Do not add a competing scheduler or evolution writer when the host already owns
 one. The workflow can reuse or coordinate that native path. A unified Web console
 and future Garden management of Vivy's internal Laputa are possible extensions
 for later discussion, not selected remote-management transports or current gates.
-Exact protocol messages, persona representation, update/conflict/history rules,
-backend interfaces and workflow packaging remain detailed design work.
+Vivy's native persona/update baseline is specified above. Cross-host protocol
+messages, backend adapters and Garden workflow packaging remain later design work.
 
 The same owner direction is recorded in the local Garden/Laputa project's
 `docs/architecture/0016-laputa-protocol-and-native-agent-governance.md`.
@@ -963,6 +1098,36 @@ implementation selections. Whether client control uses only the screen, keyboard
 and mouse or may use an auxiliary mod is unanswered. Do not silently choose that
 boundary while implementing the initial multiplayer route.
 
+### Integration contracts retained by the baseline
+
+External adapters submit typed inputs to the same durable admission/handoff path,
+retaining source event ID, conversation/participant identity and correlation.
+Resolve owner identity from configured account bindings, not an inbound display
+name or an untrusted claim. Apply the configured group filters at the adapter.
+Re-delivery uses stable source IDs when the service supplies them; adapters must
+state limitations when it does not. Outbound sends are explicit effectful
+operations with recorded destination and uncertain-outcome handling, not an
+automatic copy of every internal model response. These are requirements for
+adapters, not a finalized universal wire schema.
+
+Long-lived game connections/actions belong to the responsible host/PEN process,
+not a transient Python cell. A workbench Skill may submit, inspect or cancel an
+action through that connection. Long actions return an admission/action handle
+promptly, then expose bounded waits and committed completion/uncertainty evidence;
+admission never means the action finished. Cancelling a waiter is distinct from
+stopping the action. Host shutdown and restart must report whether the external
+body stopped, remains connected or needs reconciliation; never replay unknown
+game actions merely to recreate a Python namespace.
+
+Vivy owns intentions, persona and memory. The body may own existing low-latency
+movement/navigation/reflex mechanisms, without becoming a second conversational
+agent or an activity-specific planner inside the core. A human stop reaches the
+owned action/process even if no model is running. The selected multiplayer
+companion can decide whether to remain after owner logout, within its admitted
+activity; game-server availability does not provide Vivy-host availability.
+These requirements inform backend evaluation and preserve single-tool handoff;
+they do not select Mineflayer/Mine AI MCP or claim those candidates satisfy them.
+
 ### Remaining engineering choices and evidence
 
 Detailed design still needs the smallest package manifest, supported entry
@@ -1026,10 +1191,10 @@ or revised scripts, must also close the validation-to-automatic-adoption-to-use
 feedback loop.** The owner requests reuse research into Prime Agent before
 implementation. This supersedes the proposed persona/text-only first acceptance.
 
-The AD-2 decision below selects the execution and version-management direction.
-Exact artifact schemas, collection coverage, trigger/cadence, behavioral checks,
-publication/recovery protocol and rollback implementation remain detailed design
-work. Reusable lessons and context additions are other discussed outputs;
+The AD-2 decision and integration contracts below select execution, initial
+triggers, version publication and recovery. Exact serialization, check fixtures
+and later trigger policies remain implementation work. Reusable lessons and
+context additions are other discussed outputs;
 separating evidence from candidates and adoption results does not establish a
 finalized artifact catalog/storage contract.
 Automatic activation is the agreed behavior, not evidence that every generated
@@ -1117,16 +1282,181 @@ The first coding-face acceptance covers generation of an executable fix,
 background validation, automatic activation of the tested version, a subsequent
 real invocation and outcome collection. Exercise cancellation, failed checks,
 stale publication, restart around publication and callable-version rollback.
-Exact API names, file layout, activation ordering and recovery records remain
-engineering design work. This decision adds no runtime dependency or product code.
+The integration contracts below settle initial activation ordering and recovery
+behavior. API spelling and physical layout can be refined during implementation.
+This decision adds no runtime dependency or product code.
+
+#### AD-2 integration contracts
+
+These are the synthesis's engineering defaults within the selected AD-2 design.
+Use existing Rig saved tasks, workbench preparation/discovery and owned processes;
+do not introduce another scheduler, database, agent engine or package manager.
+
+**Admission and collection.** First expose an explicit Dream request and
+agent-requested one-shot wake through the durable task path. There is no implicit
+periodic Dream loop or mandatory after-turn reflection. A configured/admitted
+Dream run can continue while global idle autonomy is off. Allow one active Dream
+run and one validation job per workspace, with coalesced pending requests and
+bounded queues. Hold OS-backed workspace ownership for that coordinator, in
+addition to session writer ownership; another host can read published versions
+but cannot start a competing coordinator. Agent budgets and human stop apply.
+
+Collection reuses existing committed execution events, corrections and explicit
+experience markers. Key material by source agent/event and artifact revision;
+persist the bounded excerpt/reference before advancing the collection cursor.
+Replay of collection does not create another copy of the same source event.
+Record which source window a Dream run consumed, including a no-change outcome.
+Before compaction discards required source text, preserve that text or its
+immutable durable reference. Recalled evidence is not automatically a new
+observation. A collection failure leaves its cursor pending, not falsely done.
+
+**Job contract.** Keep the first job runner inside the existing host/plugin
+implementation. Its small typed operations are submit, inspect/wait and cancel;
+the exact Rust/tool names are not public protocol commitments.
+
+| Record/result | Required meaning |
+| --- | --- |
+| Candidate | Stable ID, target, expected base revision, evidence references, frozen source digest and declared environment requirements. |
+| Job admission | Job ID, owner task/generation, candidate revision, check specification, environment identity, scratch location and resource limits, durably admitted before process launch; dispatch intent is committed before spawning. |
+| Validation outcome | Passed/failed/cancelled/unknown, exact candidate/environment/check identities, exit/result evidence and bounded artifacts; committed before delivery. |
+| Adoption intent/result | Update ID, expected active publication, validation reference, old/new revisions and per-target disposition; prepared intent is not successful activation. |
+| Usage evidence | Actual loaded publication/Skill revision, invoking task/operation, result/failure reference; not the revision that merely happened to be current afterward. |
+
+Waiting cancellation detaches the waiter. Explicit job cancellation or cancellation
+of its owning Dream task stops the owned process and fences its result; cancelling
+the originating coding task does not implicitly cancel an independently admitted
+Dream run. A human stop targeting the whole agent activity/workspace also cancels
+its jobs. Returning a job ID ends the submission tool, allowing ordinary handoff.
+An optional wait is bounded; completion is persisted before it becomes one deduped
+input to the owning task. No user-facing chat message is required.
+
+Run validation in a fresh process with scratch outputs and selected fixtures,
+against the frozen source and compatible environment. The first managed Skill
+format is pure Python using SKILL.md, pyproject.toml and src/import_name; existing
+unmanaged Skills retain their current path. Check import/binding, a relevant
+function result, and the original defect against unchanged assertions on the
+old/new versions when available. A process exit of zero with no relevant assertion
+is insufficient. Verify source digests before and after checks, excluding declared
+scratch/cache outputs. These checks are bounded evidence, not proof of general
+correctness or an OS sandbox. D4 uses synthetic data, not live external targets.
+
+On host exit, stop owned validation processes; they do not survive as an invisible
+worker service. On restart, a committed outcome can be delivered again by the
+same deduplication key. A job admitted but not started can start; a started job
+without a committed outcome is unknown. Only a job explicitly confined to
+replay-safe scratch/fixture effects may start a new recorded attempt. Arbitrary
+validation scripts are not assumed safe to repeat. No success is inferred from
+an abandoned process, file presence or a submission receipt.
+
+**Code, environment and publication.** Freeze managed source revisions separately
+from dependency environments, for example under
+`.vivy/workbench/skill-revisions/<skill>/<revision>/`. The preparation owner
+extends its existing `current.json` publication to identify the environment and
+the complete selected managed Skill revision set together. Do not add a competing
+mutable active-Skill pointer or capability catalog. Immutable historical
+publication manifests and validation receipts support recovery and rollback;
+existing trusted inventory is derived from the active publication plus ordinary
+discovery, with collisions rejected rather than silently shadowed.
+
+For source-only pure-Python changes, reuse the exact compatible prepared dependency
+environment and bind the frozen src roots in a fresh worker. Check actual module
+origins so an old editable installation cannot shadow the selected revision.
+Never mutate a shared environment or a published source directory in place.
+Dependency changes prepare a new environment using the existing workflow and
+its authorization. Extend preparation with a stage-without-publication path;
+its current immediate current.json write cannot activate an unvalidated candidate.
+Code requiring native build hooks or unsupported loading is explicitly
+unsupported by the first managed path, not silently treated as a
+source-only update. Compatible reuse is a target to verify, not a present feature.
+
+Use a workspace publication lock shared by manual preparation and evolution:
+
+1. Freeze source and environment; commit the validation outcome for those exact
+   identities. Retain the previous usable source and environment.
+2. Commit an adoption intent with a stable update ID and expected active
+   publication. Acquire publication ownership; recheck that base, task generation,
+   cancellation, validation identity and installation scope.
+3. Write/sync the immutable new publication manifest and its user-owned local
+   validation record before activation, retaining the old publication's record.
+   Then atomically replace/sync the current publication using the platform's
+   verified file contract. This replacement is the activation point.
+   No affected worker starts from an unvalidated publication.
+4. Commit the adoption result, refresh the existing inventory/instruction view
+   and let each worker adopt at a cell boundary for the next newly planned
+   operation. A running or already prepared call retains its selected revision.
+   Use publication identity, not just interpreter path, to detect this change.
+   Expose namespace reset and revision in diagnostics.
+
+Pin the Skill publication exposed in a model request into the tool operations
+planned by that request. Publication during model generation must not make its
+pending tools run a different interface. A fresh model operation (or explicit
+direct-tool admission) selects the current publication; a retry keeps its frozen
+one. At dispatch the worker loads the operation's selected code/environment,
+even when a newer publication exists. If that pair is unavailable, suspend with
+a cause rather than silently substituting current code. This is the declared
+activation boundary, not in-place hot reload.
+
+If the task-log receipt is missing after activation, reconcile by update ID in
+the active publication or its retained activated ancestry; do not republish
+blindly. An unreferenced staged manifest is not evidence of activation. If a
+candidate base changed, mark it stale and return it to Dream; no last-writer-wins.
+If publication happened before cancellation won the race, record that fact;
+cancellation does not pretend to undo it. A failed or uncertain publication is
+reconciled before new affected work starts. This is coordinated recovery across
+owners, not a transaction spanning the task log, persona and MemPalace.
+
+Do not discard an old source/environment while a pending/running call pins it
+or it is the retained rollback target. Start with explicit retention and a bounded staging
+budget; stop generating more artifacts with a clear cause if that budget is
+exhausted. General garbage collection is not a first-slice requirement. Rollback
+publishes a new checked pointer to a retained usable pair; it does not replay
+or reverse earlier external actions.
+
+Laputa candidates use the same evidence/base-revision principles through Laputa's
+own compare-and-swap operation. A request-composition probe must show the selected
+persona in the next new foreground request and its absence from Dream's role.
+MemPalace writes keep stable source/event keys and their own reconciliation.
+Partial success across different targets is recorded per target, never called an
+atomic all-or-nothing evolution update. Generated instructions, package code,
+runtime imports and later usage evidence must agree on their selected revision.
+Refresh lazy instruction lookups and slash-command bindings as well as the Python
+inventory; a stale closure must not keep advertising old Skill content.
+
+**Authorization alignment.** Within the enabled AutoDream workflow, creating or
+revising a managed Skill using already admitted capabilities/dependencies is the
+selected automatic behavior. The old blanket re-prompt for every added Skill is
+superseded for this managed path. Express this in the existing project-scoped
+setup/trust mechanism: distinguish permitted managed source revisions from the
+installation grant and local validation record. A changed revision path alone
+must not force new installation consent or bypass validation.
+
+New dependency/source/native-memory scope outside the existing grant still uses
+the existing setup decision; leave that candidate pending while other valid work
+can continue. It is not a recurring human review of the candidate's content.
+Do not mark a publication trusted merely because Dream wrote it or remove the
+startup validation-before-interpreter check. Current code hashes Skill paths and
+pyprojects into setup scope and checks the executable path for worker replacement;
+both mechanisms need explicit adaptation for AD-2. No claim is made that today's
+loader already implements these rules.
+
+**Feedback and completion.** Instrument managed callable entry points and their
+results in the existing workbench records, retaining actual code revision and
+operation IDs. Do not claim full attribution of arbitrary imports, aliases or
+Python side effects. Feed later success/failure and user corrections to collection;
+publication alone is not evolution closure. D4 requires an executable defect
+case, actual subsequent call, returned evidence, persona activation, cancellation,
+failed/stale candidates, restart around publication and callable rollback. These
+records demonstrate closure; they do not by themselves prove quality improvement.
 
 ## Automatic workbench preparation: agreed direction (2026-10-28)
 
 The owner chooses project-scoped remembered consent: after the first approval,
 automatically repair missing dependencies within that approved scope. Ask again
-when adding dependencies/Skills, changing their declared sources or enabling
-native memory beyond the existing grant. Store consent under user-owned
-`RIG_HOME/initialization`, keyed by canonical project path, independently of
+when adding dependencies/third-party Skills, changing their declared sources or
+enabling native memory beyond the existing grant. The later AD-2 managed-Skill
+authorization alignment above governs generated/revised Skills: no routine
+per-candidate approval within the enabled evolution scope. Store consent under
+user-owned `RIG_HOME/initialization`, keyed by canonical project path, independently of
 session history and repository copies. A skipped prompt grants nothing; do
 not repeat it on each new session or each footer rotation. Keep a manual setup
 entry available. Headless operation must report missing approval explicitly,
@@ -1407,6 +1737,10 @@ while those or other baseline rows remain incomplete.
 
 ### Owner scope refinement: capability inventory (2026-10-27)
 
+Historical scope snapshot: the later single-core, AutoDream, Laputa and official
+QQ decisions above supersede the corresponding unselected/outside-Vivy statements
+here. They do not reopen unrelated exclusions such as migrating old products.
+
 - Do not pursue compatibility with old Vivy data or its multi-platform
   deployment arrangements. Existing platform tests remain evidence of what
   actually ran; a future platform is a separate product selection.
@@ -1516,6 +1850,11 @@ writes to the same target must be coordinated. These requirements do not imply
 a new multi-agent society, universal permissions platform or shared agent loop.
 
 ### Delivery order and the Prime capability loop
+
+Historical sequencing: the 2026-10-31 consolidated baseline now governs next work.
+Workbench/native memory implementation evidence is recorded in HANDOFF; the
+deferred real-provider check remains unpassed but is not a prohibition on the
+selected offline D0/D1 design and implementation work.
 
 Owner sequencing update, 2026-10-27: the new Python workbench is the immediate
 priority because coding and future agent paths need it. Complete its design,

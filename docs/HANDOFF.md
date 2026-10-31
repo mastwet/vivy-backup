@@ -1,5 +1,51 @@
 # Handoff: continue the independent assembly experiment
 
+## Consolidated architecture baseline and review (2026-10-31)
+
+Read the [consolidated baseline](DESIGN.md#consolidated-architecture-baseline-2026-10-31),
+its [execution contracts](DESIGN.md#preliminary-detailed-architecture-baseline-2026-10-31)
+and [AD-2 contracts](DESIGN.md#ad-2-integration-contracts) first. The owner requests
+final synthesis, review and initial lock of the recent decisions. Independent
+builder review and a focused publication-race recheck found no important planning
+blocker; the preliminary detailed architecture is now locked. This checkpoint
+supplies design, not runtime delivery. Older entries below are chronological
+evidence, superseded where they conflict with this baseline.
+
+One Rust/Rig core, Plan B, native Laputa persona, Rust-owned Recap, existing
+Python-native MemPalace, agent-led waiting and AutoDream AD-2 remain the selected
+directions. The synthesis fixes initial ownership, per-agent context, single-tool
+handoff, uncertain-effect recovery, internal job delivery and tested-version
+publication. The private framed Store is still a D0-dependent fallback.
+Dream has a distinct durable agent context on the same core; no general durable
+subagent joins, official inbox or second runtime are needed to admit its work.
+
+AD-2 requires staged preparation, an environment-plus-code publication identity,
+shared publication locking, retained usable revisions and recovery by update ID.
+Preserve startup validation before interpreter execution. Generated managed Skills
+within the enabled evolution/dependency scope use automatic adoption; the old
+blanket added-Skill prompt must not become per-candidate approval. Unadmitted
+dependency/source changes still use existing setup, without blocking all Dream work.
+Actual loaded Skill revision/results return to collection.
+
+The compact-context default is Recap plus a bounded unsummarized tail, separate
+per agent; no shared cross-session Recap. Reuse current coding compaction first.
+PEN/NeuroLink positioning and selected official QQ/NapCat/Minecraft roles remain
+locked, while package/wire details and the game backend remain integration work.
+Minecraft can use proven execution/job seams without waiting for all of D4.
+Product navigation/Diva form and the later inbox schedule remain parked.
+
+Next produce an implementation plan beginning with D0/D1 and prove the Rig seams
+at a deliberately chosen pin before adding D2 context, D3 wake and D4 evolution.
+Offline failure injection may proceed without treating the deferred real-provider
+joint acceptance as passed. Do not automatically retry that deferred provider run.
+No product code, dependency pin or reference checkout changes accompany this design.
+
+Verification: reviewed the documentation diff, passed `git diff --check`, and
+checked seven added/changed local links plus code-fence balance across the three
+changed documents. Independent builder review and its final focused recheck
+reported "nothing important left." No build, crash experiment, gameplay or
+real-provider run was performed for this documentation deliverable.
+
 ## AutoDream AD-2 selected (2026-10-31)
 
 The owner selects [AD-2: file snapshots and background validation](DESIGN.md#ad-2-file-snapshots-and-background-validation-owner-2026-10-31).
@@ -15,8 +61,9 @@ publication detection must include the Skill revision, and worker replacement
 resets transient Python state. Start with one validation job. The official inbox,
 general hooks, a Git artifact repository and another agent runtime are not needed.
 The existing durable-core Plan B and single-tool handoff/human stop decisions
-remain unchanged. Exact APIs, files and publication/recovery ordering still need
-engineering design; no implementation or runtime acceptance is delivered here.
+remain unchanged. The later synthesis above settles initial publication/recovery
+contracts; exact APIs/files remain builder choices. No implementation or runtime
+acceptance is delivered here.
 
 ## Executable Skill evolution required; Prime reuse audited (2026-10-31)
 
@@ -118,13 +165,13 @@ No dependency/reference-checkout update, issue/PR submission or runtime test is
 delivered by this source audit. The preceding architecture's acceptance goals
 and deferred real-provider gate remain unchanged.
 
-## Detailed Plan B architecture proposed (2026-10-31)
+## Detailed Plan B architecture proposed (2026-10-31, historical checkpoint)
 
 The owner requested detailed architecture after selecting Plan B. Read the
-[detailed proposal](DESIGN.md#detailed-architecture-proposal-2026-10-31) within
-the existing decision document. Plan B itself is accepted; the concrete state,
-storage and integration contracts are proposals for review, not implemented or
-new owner-approved guarantees.
+[detailed baseline](DESIGN.md#preliminary-detailed-architecture-baseline-2026-10-31)
+within the existing decision document. This entry describes the original
+proposal; the consolidated baseline above supersedes its proposal status,
+custom-Store-first implication and text-only evolution scope.
 
 The proposed minimum adds a `vivy-durable` plugin to the existing Rig execution
 path. Reuse Rig's logical conversation logs and saved components; a framed
@@ -136,8 +183,9 @@ explicit. A saved one-shot wake needs a running host for on-time execution.
 
 Later slices connect native Laputa, agent-owned Recap, existing MemPalace and
 AutoDream. Persona/context updates become effective at a new model operation;
-an interrupted operation retains its pinned context. The first AutoDream slice
-validates and automatically adopts persona/textual candidates. Product UI,
+an interrupted operation retains its pinned context. The original text-only
+AutoDream proposal was later replaced by persona and executable Skill closure
+under AD-2. Product UI,
 official inbox, external adapters and background-service deployment stay outside
 the first infrastructure loop.
 
