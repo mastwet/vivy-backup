@@ -1,5 +1,37 @@
 # Handoff: continue the independent assembly experiment
 
+## Local main consolidation (2026-11-01)
+
+At the owner's request, local `main` was fast-forwarded from `d834b7b` to
+`3136936`, retaining all 14 intervening commits. Every local feature branch is
+now an ancestor of main: Plan, provider management, native coding subagents,
+Python workbench and initialization were already integrated; D0-D4, setup repair
+and editable prompts are now included. All seven registered worktrees had clean
+tracked/untracked status at the audit. No remote push or history rewrite occurred.
+
+Continue product work in `C:/Users/Administrator/Desktop/vivy-test` on `main`.
+Earlier worktree paths below describe historical execution/evidence locations.
+Worktree directories, branch references and ignored data were retained: the
+interactive trial still uses the `aedb` worktree's executable and session data.
+This consolidation does not migrate or interrupt that trial, combine the coding
+and persistent recipes, or merge the separate Rig reference repository.
+
+Verification repeated against main's source: 34 root, 64 basics, 52 durable,
+36 managed-workbench and five Laputa Rust tests passed (191 total). The persistent
+recipe built against the unchanged local Rig fork, and the native
+`scripts/prompt_files_smoke.py` acceptance passed with a synthetic gateway,
+including retry-time edits, invalid-file recovery and same-session reopen.
+No new real-provider acceptance is claimed. Evidence is ignored under
+`.workspace/merge-check/` and `.workspace/d4/consumer/` in the main checkout.
+
+The successful build used `CARGO_TARGET_DIR=C:/vtd0`,
+`CARGO_PROFILE_DEV_DEBUG=0`, and `TEMP=TMP=C:/vtd0/tmp`, producing
+`C:/vtd0/rig-dev/debug/persistent-agent.exe`. A fresh build in the main checkout's
+default `.generated/target` failed inside `aws-lc-sys` with MSVC `LNK1104` opening
+an internal linker temporary file; changing to a writable temporary directory
+alone did not resolve it. The successful shared-cache build verifies the merged
+application, not resolution of that fresh native-dependency build issue.
+
 ## Editable prompt follow-up (2026-11-01)
 
 The persistent recipe now selects the assistant role instead of the coding role.
