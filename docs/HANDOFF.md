@@ -1,5 +1,32 @@
 # Handoff: continue the independent assembly experiment
 
+## Editable prompt follow-up (2026-11-01)
+
+The persistent recipe now selects the assistant role instead of the coding role.
+Shipped Markdown defaults are under `prompts/`; [its README](../prompts/README.md)
+describes runtime overrides, precedence, trust, update timing and persona import.
+Assistant, coding, Recap and Dream prose can be edited without rebuilding when
+copied into `RIG_HOME` or the trusted project's `.rig/`. No durable schema change
+is required. Laputa's existing revision-checked Markdown import remains authoritative.
+
+Executed checks: 64 basics tests and 52 durable tests passed, formatting and
+whitespace checks passed, and the persistent recipe built against the same local
+Rig fork. `scripts/prompt_files_smoke.py <binary>` passed against the native Windows
+executable and a synthetic gateway: distinct assistant identity, live file edits,
+BOM support, untrusted late-created files, persona order, invalid-file refusal and
+repair, exact main/Recap/Dream requests across retry-time invalid edits, persona-free
+internal roles, and same-session reopen. The new basics regression first failed
+against the old implementation. This proves loading/dispatch behavior, not the
+conversational quality of revised prose or new real-provider compatibility.
+
+Ignored evidence and a renamed build recipe are under `.workspace/d4/prompts/`.
+The existing interactive trial process was left running. Its launcher now selects
+`.generated/target/rig-dev/debug/persistent-agent-prompts.exe` on the next launch;
+its editable files are `.workspace/d4/manual/home/{ASSISTANT,RECAP,AUTODREAM}.md`.
+The original session, settings and credentials are preserved. Close the current
+trial normally before reopening it once to adopt the new executable; subsequent
+edits to these new prompt files require no restart.
+
 ## D4 AutoDream AD-2 (2026-11-01)
 
 Branch `feat/d4-autodream`, based on `334ed9e`, in

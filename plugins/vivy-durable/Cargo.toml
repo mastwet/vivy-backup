@@ -14,7 +14,7 @@ d0-probe = []
 rig-fork-probe = ["d0-probe"]
 checkpoint-probe = []
 runtime = ["dep:vivy-gateway", "dep:schemars"]
-assistant-context = ["runtime", "dep:vivy-laputa"]
+assistant-context = ["runtime", "dep:vivy-laputa", "dep:vivy-basics"]
 wake = ["assistant-context"]
 autodream = ["wake", "dep:vivy-python", "dep:vivy-process", "dep:vivy-basics"]
 

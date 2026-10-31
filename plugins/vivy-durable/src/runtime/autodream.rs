@@ -64,7 +64,7 @@ impl Default for Settings {
         }
     }
 }
-const PROMPT: &str = include_str!("autodream/prompt.md");
+const PROMPT: &str = include_str!("../../../../prompts/AUTODREAM.md");
 
 pub(super) fn install(app: &mut App) {
     context::install(app);
@@ -493,14 +493,37 @@ fn tick(world: &mut World) {
         }
     }
 }
-fn role(
-    mut calls: Query<(&ForAgent, &mut ModelRequest), Added<Admitted>>,
-    agents: Query<&DurableAgentState>,
-) {
-    for (of, mut request) in &mut calls {
-        if agents.get(of.0).is_ok_and(|s| s.evolution.dream) {
-            if let Some(prompt) = &mut request.prompt {
-                prompt.role = PROMPT.into();
+fn role(world: &mut World) {
+    let calls: Vec<_> = world
+        .query_filtered::<(Entity, &ForAgent, &ModelRequest), (Added<Admitted>, Without<Restored>)>(
+        )
+        .iter(world)
+        .filter(|(_, of, r)| {
+            r.prompt.is_some()
+                && world
+                    .get::<DurableAgentState>(of.0)
+                    .is_some_and(|s| s.evolution.dream)
+        })
+        .map(|(e, _, _)| e)
+        .collect();
+    if calls.is_empty() {
+        return;
+    }
+    for call in calls {
+        match vivy_basics::prompt::load_role(world, call, "AUTODREAM.md", PROMPT) {
+            Ok(text) => {
+                world
+                    .get_mut::<ModelRequest>(call)
+                    .unwrap()
+                    .prompt
+                    .as_mut()
+                    .unwrap()
+                    .role = text
+            }
+            Err(error) => {
+                world
+                    .entity_mut(call)
+                    .insert(Outcome::refused(error.to_string()));
             }
         }
     }

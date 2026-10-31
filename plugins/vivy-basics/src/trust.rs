@@ -148,6 +148,10 @@ pub fn protected(root: &Path) -> Vec<PathBuf> {
         "agents",
         "SYSTEM.md",
         "APPEND_SYSTEM.md",
+        "ASSISTANT.md",
+        "CODING.md",
+        "RECAP.md",
+        "AUTODREAM.md",
     ]
     .iter()
     .map(|name| root.join(".rig").join(name))

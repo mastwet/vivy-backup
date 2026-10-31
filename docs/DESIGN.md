@@ -1,5 +1,28 @@
 # Decisions and assembly direction
 
+## Human-editable prompt files (2026-11-01)
+
+The prompt refactor follows the request to let humans edit Markdown. Defaults
+live in `prompts/`; trusted `.rig/<name>.md` overrides user `RIG_HOME/<name>.md`,
+then the compiled default. `ASSISTANT.md`, `CODING.md`, `RECAP.md` and
+`AUTODREAM.md` configure prose for existing compiled consumers. New operations
+read current files; existing requests and persistent retries remain frozen.
+Invalid overrides report their path and stop the affected new operation. There
+is no watcher, template engine, prompt database or second execution path.
+
+The persistent recipe now selects `AssistantPromptPlugin`; it previously reused
+the coding identity. Coding retains its separate recipe-selected role. Existing
+SYSTEM/CLI role replacement and APPEND/context files keep their startup semantics.
+Laputa remains the top persona authority: human Markdown enters via the existing
+revision-checked `/persona update` command, preserving evolution conflict detection
+and rollback. The refactor does not change saved-state schemas, Recap projection,
+tool schemas, lifecycle checks or Dream's persona exclusion.
+
+Source-only extraction would still require rebuilding after every edit. A larger
+prompt management service is unnecessary. Runtime file overrides reuse the
+existing project trust and prompt precedence model; this is the implementation
+choice for the requested decoupling. See [editing instructions](../prompts/README.md).
+
 ## D4 AutoDream implementation (2026-11-01)
 
 The persistent recipe now compiles `vivy-durable/autodream`, including the D3/D2
