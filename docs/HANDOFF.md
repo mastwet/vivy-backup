@@ -1,5 +1,26 @@
 # Handoff: continue the independent assembly experiment
 
+## Executable Skill evolution required; Prime reuse audited (2026-10-31)
+
+The owner includes executable Skill generation, validation, automatic adoption
+and later-use feedback in AutoDream's acceptance scope. This supersedes the
+persona/text-only first-slice proposal below. Read the
+[Prime executable Skill audit](research/2026-10-25-hybrid-agent-workbench-decisions.md#25-prime-executable-skill-reuse-for-autodream-2026-10-31).
+
+Remote main `c6d4da9421e6087e3fc1a763e947cf37153cd76f` supplies authoring guidance,
+Python package conventions, callable binding/bootstrap, command quality checks
+and refinement entry conflict/history/rollback mechanisms. It does not establish
+a complete executable-package test/publish/rollback/usage-feedback workflow.
+Reuse current Vivy discovery/preparation/loading; propose small adaptations and
+tested-revision publication instead of importing Prime's session engine. Exact
+publication details remain design work; no runtime dependency was added.
+
+A temporary Python 3.13.12 loader probe accepted synthetic Prime-shaped packages
+and exercised sync/async calls. Awaiting a synchronous run through Vivy's wrapper
+raised TypeError, unlike Prime's always-awaitable wrapper; callable signatures
+also differ. This was not a package-install, Prime runtime or model/evolution
+acceptance run. Reference checkouts were unchanged; no product code was edited.
+
 ## Agent-led principle and transition to AutoDream design (2026-10-31)
 
 The owner prioritizes agent freedom and More, Fast, Good, Frugal. The agent

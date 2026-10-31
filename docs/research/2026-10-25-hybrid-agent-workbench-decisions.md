@@ -2413,3 +2413,127 @@ deferred; the first game only needs its concrete observation/control path.
 **Verification:** primary papers, upstream documentation, source and test
 definitions inspected. No dependencies installed, game/MCP service started,
 tests run or actual provider/gameplay behavior verified in this research.
+
+## 25. Prime executable Skill reuse for AutoDream (2026-10-31)
+
+The owner confirms that executable Skills, including scripts, belong in the
+AutoDream validation, automatic-adoption and subsequent-use feedback loop, and
+requests Prime reuse research first. This replaces the proposed text-only first
+acceptance; it does not select Prime's runtime or authorize implementation of a
+new evolution engine.
+
+### Inspected revision and reusable pieces
+
+Inspected remote main [c6d4da9421e6087e3fc1a763e947cf37153cd76f](https://github.com/PrimeIntellect-ai/prime-agent/commit/c6d4da9421e6087e3fc1a763e947cf37153cd76f)
+(2026-10-30), pinned for the source links below. The existing local reference
+remains clean at `c4c238ca025e382d96fb5f37e6328ca77fb82ef3`; no fetch, checkout
+update or clone was needed. Treat the bundled skill-creator as research material,
+not an instruction to install or execute its example commands.
+
+| Component | What the inspected code actually supplies | Reuse recommendation |
+| --- | --- | --- |
+| [Skill creator](https://github.com/PrimeIntellect-ai/prime-agent/blob/c6d4da9421e6087e3fc1a763e947cf37153cd76f/skills/skill-creator/SKILL.md) | Instructions for producing Markdown Skills and Python packages, checking metadata and trying loading/calling. This is an authoring Skill, not an autonomous test-and-promote service. | Adapt its authoring instructions and templates for Dream and Vivy's paths/tools. |
+| [Python contract](https://github.com/PrimeIntellect-ai/prime-agent/blob/c6d4da9421e6087e3fc1a763e947cf37153cd76f/skills/skill-creator/references/python-skills.md) | SKILL.md, pyproject.toml, src/import_name/__init__.py; optional run() entry point. Standalone and kernel checks are documented. | Keep compatible package structure; use Vivy's existing Python environment. |
+| [Callable bootstrap](https://github.com/PrimeIntellect-ai/prime-agent/blob/c6d4da9421e6087e3fc1a763e947cf37153cd76f/crates/pa-core/src/kernel/bootstrap/runtime_code.rs) | Wraps sync/async run() in an awaitable module, preserves signature/docstring, reports import errors without losing other Skills. | Small callable-compatibility donor; do not import its full RLM/bootstrap bindings. |
+| [Package preparation](https://github.com/PrimeIntellect-ai/prime-agent/blob/c6d4da9421e6087e3fc1a763e947cf37153cd76f/crates/pa-core/src/kernel/bootstrap/venv.rs) | Batched editable installs, per-package fallback, pyproject-based installation records, shared environment reuse. | Compare against existing Vivy preparation before changing it; this is environment preparation, not immutable Skill version publication. |
+| [Command quality checks](https://github.com/PrimeIntellect-ai/prime-agent/blob/c6d4da9421e6087e3fc1a763e947cf37153cd76f/crates/pa-core/src/autonomous/gates.rs) | Shell checks with timeout/output limits, failure feedback and bounded retries; unchanged-workspace detection avoids repeating the same failed command. | Borrow result/feedback semantics for a Dream validation task; use the existing process owner. Do not copy the autonomous continuation policy. |
+| [Refinement planner](https://github.com/PrimeIntellect-ai/prime-agent/blob/c6d4da9421e6087e3fc1a763e947cf37153cd76f/crates/pa-core/src/refinement/planner.rs) | Typed edits, validation, apply-time baseline conflict checks, per-edit before/after records and inverse edits for rollback. Skill edits store a Python reference and arguments. | Reuse the small candidate/receipt/conflict ideas or extracted helpers; adapt destinations to Laputa, memory and actual Skill files. |
+
+The command checks run configured commands and use process outcomes. They do
+not independently establish the adequacy of the assertions, compare a candidate
+Skill against its predecessor, publish a package revision or track later Skill
+performance. Their workspace snapshot suppresses repeated failed checks; it is
+not a guarantee that a future installed package matches a tested artifact.
+
+The refinement prompt explicitly leaves source-file editing outside its scope.
+Its Skill validation checks the reference/argument structure, not execution of
+the referenced function. Rollback restores stored entry snapshots, including
+references; it does not restore package source, dependencies or external effects.
+`expectedOutcome` records the proposal's prediction, not an observed evaluation
+result. A separate authoring agent can create executable Skills, but connecting
+that authoring path to testing, activation and feedback is additional work.
+
+The relevant Rust implementation is inside [pa-core](https://github.com/PrimeIntellect-ai/prime-agent/blob/c6d4da9421e6087e3fc1a763e947cf37153cd76f/crates/pa-core/Cargo.toml),
+which also owns sessions, kernel, providers and other agent facilities. No small
+standalone Skill-evolution crate was established by this inspection. The
+[repository license](https://github.com/PrimeIntellect-ai/prime-agent/blob/c6d4da9421e6087e3fc1a763e947cf37153cd76f/LICENSE)
+is MIT; any later source/template adaptation must retain the applicable notices.
+
+### Existing Vivy overlap and compatibility probe
+
+Current source already supplies the main execution-side pieces:
+
+- `plugins/vivy-basics/src/skills.rs`: trusted discovery, one inventory and lazy
+  instruction access. Continue deriving capabilities from this path.
+- `plugins/vivy-python/python/vivy_workbench/capabilities.py`: pyproject-based
+  imports, callable run() binding, readiness and host-requirement checks.
+- `plugins/vivy-python/python/vivy_workbench/prepare.py`: prepare a separate
+  environment, install Skills, check dependency/import readiness, then publish
+  current.json. Failed preparation does not publish that new environment.
+- `plugins/vivy-python/src/management.rs`: refresh discovery and adopt a prepared
+  environment through the existing worker lifecycle. Fresh workers lose their
+  transient Python variables; explicit artifacts and committed memory persist.
+
+Both Prime and current Vivy use editable Skill installations. Vivy's environment
+identity includes package paths and pyproject content, not all package source.
+Editing an active source directory therefore does not provide a tested, fixed
+revision or a reliable whole-package rollback by itself. New publication needs
+to bind code, environment and validation evidence to the same revision.
+
+A one-off, temporary-directory probe used Python **3.13.12**, synthetic
+Prime-shaped SKILL.md/pyproject/src packages, and the actual Vivy capabilities
+loader. Source directories were put on sys.path; nothing was installed:
+
+- Both packages loaded as ready from the supplied inventory; direct sync and
+  awaited async calls returned their expected results. Host discovery was not
+  exercised by this probe.
+- Prime-style `await skill(...)` on a synchronous run() raised **TypeError** in
+  Vivy. Its wrapper returns the raw result; Prime wraps both forms in async call.
+- Vivy's wrapper signature was `(*args, **kwargs)`; Prime copies run()'s signature.
+
+This demonstrates a small adaptation need, not complete Prime compatibility.
+The optional [CLI shim](https://github.com/PrimeIntellect-ai/prime-agent/blob/c6d4da9421e6087e3fc1a763e947cf37153cd76f/prime-agent-runtime/src/rlm/skill.py)
+also depends on `rlm.skill` and tyro; omit or adapt that entry point when not
+using Prime's runtime. Skills depending on rlm.spawn, Prime host requests or
+other kernel globals need separate adaptation. Ordinary Python imports are the
+cheapest shared surface.
+
+### Proposed minimal integration
+
+Keep a single Dream task in Vivy's existing durable execution path. Reuse the
+authoring convention, existing workbench and small Prime mechanisms as follows:
+
+1. Collect a bounded evidence window. Dream chooses whether to create, revise
+   or leave a Skill unchanged, using normal workbench tools in its workspace.
+2. Keep the candidate separate from the active package and give it a fixed
+   source revision. Run relevant import/function checks and, for a known defect,
+   the original failure case against both versions with the same assertions.
+   Tests may be simple scripts; no universal evaluation service is required.
+3. Bind validation results to that source revision and environment. Candidate
+   changes invalidate the earlier result. Failed checks return useful evidence
+   to Dream and preserve the currently active revision.
+4. Automatically publish the tested revision through the existing capability
+   owner. Reuse preparation/publication and discovery rather than maintain a
+   second Skill catalog. Recheck the base version to preserve concurrent edits;
+   later calls adopt the selected revision at a declared worker boundary.
+5. Record which revision was actually invoked and its result. Feed later
+   failures, successes and user corrections back into the next evidence window.
+   Retain a previous usable revision for rollback; replaying past external
+   actions is not part of rollback.
+
+This adds artifact publication and feedback to existing execution, not a new
+agent runtime, Factory, universal plugin SDK or mandatory review agent. Normal
+adoption remains automatic. Existing initialization/installation authorization
+and YAML build-time component selection remain authoritative; this research
+does not grant new host capabilities.
+
+The first acceptance should show an executable candidate fixing a concrete
+failure, automatic adoption of that exact revision, actual subsequent invocation
+and feedback collection. Also exercise a rejected candidate, stale publication,
+restart around publication and rollback to a callable previous revision. Exact
+file layout, publication API and failure-recovery details remain design work.
+
+**Verification:** current upstream source and test definitions inspected, plus
+the isolated loader probe above. No upstream test suite, package installer,
+model-generated Skill, real provider or full evolution chain was run. No runtime
+dependency, product code or reference checkout was changed.

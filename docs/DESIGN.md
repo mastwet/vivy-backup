@@ -560,8 +560,12 @@ source references and selected evidence into its dedicated workspace. Source
 events, candidates, validation results and adoption receipts remain distinguishable;
 do not collect recalled material again as fresh experience by default.
 
-The proposed first evolution slice handles persona candidates and reusable
-textual lessons; this narrower delivery scope remains open for discussion.
+**Owner clarification (2026-10-31): executable Skill generation, validation,
+automatic adoption and subsequent-use feedback belong in the evolution
+acceptance scope.** A persona/text-only loop is insufficient. Research Prime's
+existing infrastructure before implementing equivalents; see the
+[executable Skill audit](research/2026-10-25-hybrid-agent-workbench-decisions.md#25-prime-executable-skill-reuse-for-autodream-2026-10-31).
+
 Candidates name base revisions and evidence. Validate schema, scope,
 size, applicability and preservation of required constraints, then automatically
 apply valid candidates through Laputa or the memory owner. Reject or regenerate
@@ -569,9 +573,23 @@ stale candidates. Routine per-candidate human approval is not an activation gate
 Task records retain the effective revision and failure reason. Persona rollback
 is a new checked revision, not history deletion. Mixed-backend adoptions are
 separate recorded operations, not an invented atomic update across all stores.
-Executable Skill candidates require their own validation before later inclusion;
-the initial textual slice is not proof of general self-modifying-code safety or
-of measured improvement in agent quality.
+
+The executable Skill integration proposal reuses Prime's package convention and
+the existing Vivy workbench discovery, preparation and loading path. Dream writes
+a candidate revision, runs relevant checks against that revision and requests
+automatic publication through the existing owner. Preserve the tested source
+revision, bind its validation receipt to it, and make later calls use that exact
+revision. An editable install or a changed file alone does not establish this
+property. Retain the previous usable revision, reject stale publication and
+collect actual use/results for later Dream runs. Rollback selects a prior code
+revision; it does not undo external actions already performed by that code.
+
+Prime's command quality checks and refinement conflict/history mechanisms are
+useful donors, but its refinement rollback restores harness entries rather than
+Skill package files. Prefer small adaptations over importing pa-core's session
+engine or adding a second runtime. Validation failure leaves the active revision
+in place and returns the evidence to Dream. These are integration proposals,
+not an implemented publisher or proof of improved agent quality.
 
 #### 10. Compatibility, acceptance and remaining engineering choices
 
@@ -593,7 +611,7 @@ must preserve the task checkpoints and required active call pairs.
 | D1: control/failure | Inject append/sync/serialization errors, torn tail and corruption; cancel with late results; introduce new input between two requested tools; inspect valid tool-call/result pairing and worker cleanup |
 | D2: context and memory | Inspect actual model requests for persona revisions and Recap coverage; restart and recall written evidence; reconcile a repeated/incomplete memory write and a missing Python namespace |
 | D3: wake | Restart before/after a deadline, duplicate callback, replace/cancel deadline, wake while busy, silent outcome and exhausted budget |
-| D4: evolution | Evidence collected once, candidate validated, automatic adoption recorded, next new request uses the adopted version, stale update rejected and rollback exercised |
+| D4: evolution | Evidence collected once; persona and executable Skill candidates validated; tested Skill revision automatically adopted and actually called by subsequent work; usage/results returned as new evidence; failed/stale publication preserves the active version; restart and code/persona rollback exercised |
 
 D1-D3 form the first persistent-agent infrastructure loop. D4 closes the agreed
 learning/evolution loop. Use synthetic data and deterministic offline models
@@ -1001,12 +1019,16 @@ even when both are automatic. Persona-free execution describes how Dream runs;
 persona data is still one of its intended outputs. Exact persona input and
 write boundaries remain to be specified.
 
-Artifact categories and schemas, collection sources, trigger/cadence, validation
-and automatic-adoption criteria, effective-version boundaries, failure/retry
-handling and rollback remain detailed design work. The discussion suggested
-reusable lessons, context additions and executable Skills as possible artifacts,
-and separating original evidence from generated candidates and adoption results;
-these suggestions are not a finalized artifact catalog or storage contract.
+**Scope clarification (owner, 2026-10-31): executable Skills, including generated
+or revised scripts, must also close the validation-to-automatic-adoption-to-use
+feedback loop.** The owner requests reuse research into Prime Agent before
+implementation. This supersedes the proposed persona/text-only first acceptance.
+
+Artifact schemas, collection sources, trigger/cadence, validation and
+automatic-adoption criteria, effective-version boundaries, failure/retry handling
+and rollback remain detailed design work. Reusable lessons and context additions
+are other discussed outputs; separating original evidence from candidates and
+adoption results does not establish a finalized artifact catalog/storage contract.
 Automatic activation is the agreed behavior, not evidence that every generated
 candidate is valid or improves later task performance. Validation must fit the
 artifact without silently reintroducing mandatory per-candidate human approval.
