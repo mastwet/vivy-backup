@@ -6,6 +6,33 @@ use std::{fs::File, io, path::Path, process::Command};
 // Excluded when copying sessions written by earlier generated builds.
 pub const EXECUTION_LOCK: &str = ".vivy-execution.lock";
 
+/// History mutation of grouped checkpoints needs lifecycle-aware rewriting.
+/// Refuse it before a destination or source log can be changed. This is format
+/// detection only; normal open still validates every complete record and schema.
+pub fn require_ordinary_history(directory: &Path) -> io::Result<()> {
+    use std::io::Read;
+    let logs = match std::fs::read_dir(directory.join("logs")) {
+        Ok(logs) => logs,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(error),
+    };
+    for entry in logs {
+        let entry = entry?;
+        if entry.path().extension().is_none_or(|e| e != "jsonl") {
+            continue;
+        }
+        let mut bytes = Vec::new();
+        File::open(entry.path())?.take(96).read_to_end(&mut bytes)?;
+        if bytes.starts_with(b"{\"format\":\"rig-checkpoint/") {
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "fork, clone, rewind, import and history rewriting are unsupported for checkpoint sessions",
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Keep alive until the app and its cleanup have finished. A launcher retains
 /// the session lease while its child holds the execution lock.
 pub struct SessionGuard {
@@ -186,6 +213,17 @@ fn parent_process_id() -> io::Result<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn grouped_history_mutation_is_refused_without_changing_any_bytes() {
+        let fixture = Fixture::new();
+        let dir = fixture.0.session(&SessionId::generate());
+        std::fs::create_dir_all(dir.path().join("logs")).unwrap();
+        let log = dir.path().join("logs/main.jsonl");
+        let bytes = b"{\"format\":\"rig-checkpoint/1\"}\n";
+        std::fs::write(&log, bytes).unwrap();
+        assert!(require_ordinary_history(dir.path()).is_err());
+        assert_eq!(std::fs::read(log).unwrap(), bytes);
+    }
     struct Fixture(Home);
     impl Fixture {
         fn new() -> Self {

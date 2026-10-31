@@ -151,6 +151,7 @@ pub fn run(binary: &Path, args: &[String]) -> Result<u8> {
     if let Some(original) = &options.fork {
         let original = home.find(original)?;
         let source = SessionGuard::direct(home.session(&original))?;
+        vivy_process::session::require_ordinary_history(source.directory.path())?;
         let copy = SessionId::generate();
         let target = SessionGuard::direct(home.session(&copy))?;
         copy_session(source.directory.path(), target.directory.path())?;

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.97.1"
 publish = false
-description = "Experimental D0 probes of the existing Rig execution and persistence seams."
+description = "Opt-in persistent agent lifecycle and Rig checkpoint acceptance probes."
 
 [features]
 default = []
@@ -12,6 +12,8 @@ d0-probe = []
 # Acceptance tests for the local Rig fork; normal pinned probes keep their
 # original characterization. This feature adds no runtime capability.
 rig-fork-probe = ["d0-probe"]
+checkpoint-probe = []
+runtime = ["dep:vivy-gateway", "dep:schemars"]
 
 [dependencies]
 rig-harness = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776" }
@@ -21,6 +23,8 @@ bevy_reflect = "=0.20.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+schemars = { version = "1", optional = true }
+vivy-gateway = { path = "../vivy-gateway", default-features = false, optional = true }
 
 [dev-dependencies]
 rig-core = { git = "https://github.com/0xPlaygrounds/rig", rev = "fc556f982d501eea9d7167398a19386e4884e776", features = ["test-utils"] }

@@ -1,5 +1,92 @@
 # D0 implementation: Rig upgrade and persistence seam probes
 
+## Authorized continuation: D0 completion and D1 (2026-10-31)
+
+The owner approved implementation of D0 completion followed by D1, using grouped
+append records rather than whole-history replacement. This section supersedes
+the original proposal-only/no-D1 boundary below. Spec: DESIGN's accepted owner
+rulings and preliminary detailed architecture. Execute inline with focused
+regressions and a final independent review; do not publish or push.
+
+- [x] Rig opt-in grouped checkpoints: complete records, exact receipts, torn-tail
+  recovery, corruption refusal, preserved first failure, unchanged ordinary logs.
+- [x] Rig final-outcome persistence boundary, including stop/retry/supersession,
+  and saved model/tool result restoration without external redispatch.
+- [x] Required saved-key/schema preflight before mutation; repeat D0 acceptance.
+- [x] Vivy runtime-feature DurablePlugin and separate persistent recipe: task
+  admission/deduplication, intent/result gates, recovery, uncertainty resolution,
+  serial tools, durable cancellation and single-tool input handoff.
+- [x] Entry/maintenance guards and explicit local Rig development builds; recipe
+  run command, isolated development locks and one Rig dependency source.
+- [x] Actual Windows executable crash matrix, baseline regressions, costs,
+  records and independent review. D0 must pass before D1 is claimed usable.
+
+Interfaces: Rig owns the grouped-log adapter/receipts, required-state validation
+and final-result scheduling. Vivy owns DurableAgentState (stable saved schema),
+submit/inspect/cancel/resolve, task_control and operation/generation policy. No
+second model/tool loop or task database. Runtime capabilities remain YAML-selected.
+
+Acceptance: kill before/after intent, after effect/before result, after result/
+before publication, and after completion; reuse committed outcomes, never blindly
+repeat uncertain unsafe effects. Test failed/partial writes, corrupt complete
+records, missing required state, stale receipts, duplicate input, changed route,
+new input between tools, cancellation with late results and competing writers.
+
+First guarantee is ordinary process-crash recovery only. Reuse existing retry and
+resource controls. Persona/Recap/memory, wake scheduling, AutoDream, delegation,
+coding-session management and owner/outsider policy are out of this slice. Reject
+unsupported durable fork/rewind/clone/import/history mutation before writing.
+Local --rig-path integration is development-only; production pins and recipe lock
+files stay unchanged. No real-provider, OS-crash or power-loss claim from fixtures.
+
+Implementation and executed evidence are in [HANDOFF](../HANDOFF.md#d0d1-local-runtime-2026-10-31)
+and the [storage record](../research/2026-10-27-session-storage.md#grouped-checkpoints-and-d1-2026-10-31).
+The Rust consumer has 22 passing tests; the actual executable passed nine crash
+boundaries and Shell/Python cancellation. Ordinary coding regressions pass. Four
+known Rig Windows baseline tests still fail; they are documented, not ignored.
+Final implementation verification completed on 2026-11-01; both branches remain
+local and the original main checkout is unchanged.
+One fresh-context whole-branch review found three Important lifecycle issues;
+all three were reproduced with failing tests and fixed in one pass. There were
+no Critical or deferred Minor findings. The fix-pass consumer suite passes 22/22:
+
+- Pending controls now bind origin and target generations and are invalidated
+  on human stop. Sixteen combinations cover all four actions before/after control
+  commit, both live and across restart.
+- Ending A by defer, silent finish or normal answer preserves a foreground
+  decision turn for already-delivered B, live and after reopen. The existing text
+  is not appended again. Silent end records Rig's halt, rather than letting a
+  trailing tool result look like interrupted work after restart.
+- Cancelling B after Rig inbox acceptance withdraws its input before the next
+  model request. The regression inspects the actual captured request content.
+
+Execution rulings:
+
+- Keep grouped encoding in a public opt-in Rig adapter, preserving logical Rig
+  logs. This avoids a private Vivy store; an adapter defect would affect all
+  selected logs, so conformance and interrupted writes are acceptance tests.
+- Preserve conditional-length `Changed` conflicts as retryable at Store level,
+  invalidating receipts. The execution Writer still latches failure. Poisoning
+  the adapter on an ordinary rejected precondition would break Store conformance.
+- Match route by safe provider configuration content, not an ephemeral reload
+  counter that resets on restart. Opaque external routing changes remain outside
+  this local identity check.
+- Reuse and retain the existing ignored `.workspace/d0-d1` ledger/test evidence
+  rather than creating/deleting another skill workspace; durable conclusions and
+  runnable commands are in these existing docs. Cost is local scratch disk space.
+- Continue already-admitted unfinished input after an ordinary task end; this
+  completes foreground delivery rather than adding D3 idle scheduling. Human stop
+  clears that pending continuation. Regression coverage guards against both lost
+  input and unexpected execution after stop.
+
+Review boundaries retained: OS/power/filesystem failure and actual providers are
+unverified; D2-D4 and delegation remain excluded; sustained retention/performance
+and the four reproduced Windows baseline failures remain later work. These limits
+mean this is a local D1 experiment, not the complete always-on assistant or a
+fully green cross-platform Rig release.
+
+## Historical first D0 probe delivery
+
 Status: implemented and independently reviewed; findings fixed with regressions.
 D0 persistence gate: blocked by
 reproduced gaps. Spec: [architecture baseline](../DESIGN.md#preliminary-detailed-architecture-baseline-2026-10-31).

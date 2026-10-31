@@ -110,6 +110,7 @@ fn tree(In(args): In<CommandArgs>, mut commands: Commands) {
 /// Copies the session directory `from` to `to`, without what belongs to
 /// the process running it: locks, a pending switch, its name.
 pub fn copy_session(from: &Path, to: &Path) -> std::io::Result<()> {
+    vivy_process::session::require_ordinary_history(from)?;
     const LEFT_OUT: [&str; 5] = [".rig-memory.lock", "lock", "switch", "deleting", "name"];
     std::fs::create_dir_all(to)?;
     for entry in std::fs::read_dir(from)? {
@@ -198,9 +199,16 @@ pub fn read_jsonl(text: &str) -> Result<Vec<conversation::Entry>, String> {
 fn import(
     In(args): In<CommandArgs>,
     mut agents: Query<(&mut Conversation, Option<&WorkDir>)>,
+    paths: Option<Res<SessionPaths>>,
     root: Option<Res<ProjectRoot>>,
     mut notices: MessageWriter<Notice>,
 ) {
+    if let Some(paths) = paths {
+        if let Err(error) = vivy_process::session::require_ordinary_history(paths.path()) {
+            notices.write(Notice::error(args.agent, error.to_string()));
+            return;
+        }
+    }
     let Ok((mut conversation, workdir)) = agents.get_mut(args.agent) else {
         return;
     };

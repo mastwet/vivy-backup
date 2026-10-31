@@ -1,5 +1,61 @@
 # Handoff: continue the independent assembly experiment
 
+## D0/D1 local runtime (2026-10-31)
+
+The grouped-checkpoint D0 consumer and minimal D1 runtime now run through the
+actual Windows builder, launcher and executable. Earlier blocked status below is
+historical for the pinned upstream. The new path explicitly requires the editable
+Rig fork; no production pins or checked-in recipe locks were replaced.
+
+Implementation is in the existing Vivy feature worktree
+`C:/Users/Administrator/.codex/worktrees/aedb/vivy-test`, branch
+`feat/d0-rig-probes`; Rig is
+`C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable`, branch
+`feat/durable-checkpoints`, checkpoint implementation commit `810d7dfd`.
+The original Vivy main checkout is unchanged. No push
+or PR is part of this delivery. Run from the feature worktree:
+
+```powershell
+$env:CARGO_TARGET_DIR = 'C:/vtd0'
+$env:CARGO_PROFILE_DEV_DEBUG = '0'
+cargo build --offline -p vivy
+C:/vtd0/debug/vivy.exe build recipes/persistent-agent.yaml --rig-path C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable
+C:/vtd0/debug/vivy.exe run recipes/persistent-agent.yaml --rig-path C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable -- -p "hello"
+```
+
+The last command uses the normal gateway settings and environment-variable
+credential reference; it needs a configured endpoint. No credential is supplied
+by the recipe. Omit `-p "hello"` for the coding face, or append
+`--resume <session-id> -p` to resume unfinished work without new input. Use the
+same workspace on resume. A finished session with no prompt exits 2 normally.
+Development builds keep their own generated package, Cargo.lock and `rig-dev`
+target directory; metadata rejects mixed Rig sources. Rebuild after source edits.
+An old coding session is not converted. Durable fork/rewind/copy/import is refused.
+
+Reproduce offline Rust and synthetic loopback acceptance:
+
+```powershell
+$env:PYTHONUTF8 = '1'
+python scripts/rig_fork_probe.py --runtime --rig C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable
+python scripts/checkpoint_smoke.py C:/vtd0/debug/vivy.exe C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable
+python scripts/durable_runtime_smoke.py C:/vtd0/debug/vivy.exe C:/Users/Administrator/Desktop/vivy-test/.workspace/rig-durable
+```
+
+Executed evidence is summarized in the [plan](plans/2026-10-31-d0-rig-probes.md)
+and [storage research](research/2026-10-27-session-storage.md#grouped-checkpoints-and-d1-2026-10-31).
+The process-kill matrix covers nine intent/effect/result/completion boundaries.
+Intent-only unsafe tools stay unknown, saved results are reused, competing writers
+are refused, and actual Shell/Python workers stop on human cancellation with no
+restart replay. Missing-plugin, invalid-state and complete-corruption entry tests
+preserve the original logs/files. Ordinary coding/provider/subagent/ownership
+smokes pass. Rig retains four reproduced Windows baseline stage-test failures;
+the full ECS suite is not green. Real-provider, OS-crash and power-loss behavior
+are unverified and are not acceptance claims.
+
+Next is D2: persona and asynchronous Recap-only context. D1's current conversation
+context is only an execution fixture, not that completed policy. It includes no
+delegation, scheduler, AutoDream, owner distinction or automatic memory recall.
+
 ## Requirements audit: owner rulings accepted (2026-10-31)
 
 Read the [accepted rulings](DESIGN.md#requirements-audit-and-owner-rulings-2026-10-31).
@@ -23,12 +79,10 @@ mechanisms and numeric defaults are deferred. Owner/outsider differentiation and
 role-specific context policy are also deferred, including the earlier audit's
 proposed isolation. Preserve normal event identities and explicit human stop.
 
-DESIGN, the D0 plan and storage proposals now reflect this contract. Existing
-Rig patches and executed evidence remain applicable. Complete checkpoint/result
-ordering and required-state validation are still missing: D0 is not passed merely
-because disk sync is no longer mandatory. Repeat acceptance against the revised
-process-crash target before advancing. This update changes documentation only;
-diff review and `git diff --check` do not establish runtime guarantees.
+DESIGN, the D0 plan and storage proposals reflect this contract. At the audit,
+checkpoint/result ordering and required-state validation were missing. The local
+implementation and repeated process-crash acceptance above now address those
+gaps; relaxing disk sync alone was never evidence of a pass.
 
 ## Assistant context clarification (2026-10-31)
 

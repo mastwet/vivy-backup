@@ -1,5 +1,70 @@
 # Session storage and durable state: reference comparison
 
+## Grouped checkpoints and D1 (2026-10-31)
+
+This implementation supersedes the older missing-seam findings **only for the
+local Rig fork**. Ordinary pinned-upstream probe results below remain historical
+characterizations. Reproduction commands and checkout locations are in
+[HANDOFF](../HANDOFF.md#d0d1-local-runtime-2026-10-31).
+
+Rig owns the opt-in `CheckpointStore`, `Writer::open_checked`, required saved
+keys/versions, and `PersistOutcomes`/`CommitBarrier`/`FinalOutcome` in `Finalize`.
+Vivy selects `DurablePlugin` with `runtime`; it owns admission identities, task
+generations, frozen intents, exact receipt matching, retry restoration, explicit
+unknown effects and task controls. Both use Rig's existing conversation folding,
+model/tool execution, holds, cancellation, storage and inbox. There is one
+execution path and no separate persistence database. The local build verifies a
+single Rig dependency source and isolates development locks/targets.
+
+Executed Windows evidence (synthetic offline/loopback fixtures):
+
+| Check | Result |
+| --- | --- |
+| Root workspace tests | 34 passed |
+| Vivy basics library regression | 62 passed with default features |
+| Local D0 checkpoint + D1 runtime consumer | 22 passed, including three review regressions |
+| Previous fork acceptance | 12 passed |
+| Rig memory, all features | 62 unit, 11 checkpoint, 2 migration and 16 doc tests passed |
+| Rig ECS, all features | 49 unit, 12 other integration, 70 stage and 7 doc tests passed; 4 pre-existing Windows stage failures remain |
+| Scoped Rig library Clippy | Passed with warnings denied |
+| Rig memory/ECS WASM libraries | `wasm32-unknown-unknown` compilation passed; no browser runtime claim |
+| Actual D0 executable | Intent/result ordering; absent plugin, malformed required state, corrupt group, fork refusal; logs/files preserved on refusal |
+| Actual D1 process crashes | Nine boundaries passed; saved replies/results not resent; uncertain tool not replayed; competing writer refused |
+| Human stop | Real Shell descendant and Python workbench worker stopped; cancellation persisted; no request after restart |
+| Ordinary coding, provider, native subagent and ownership smokes | Passed |
+
+The nine boundaries are before/after model intent, model reply before result
+commit, after model result, before/after tool intent, external effect before result
+commit, after tool result, and after task completion. Each reopens the actual
+executable on a disposable session. The last completed/no-input reopen exits 2,
+as Rig normally does without a prompt. The uncertain cases end suspended with
+evidence retained, not with a fabricated successful result.
+
+Observed costs on this machine: the first recorded full persistent executable
+build after warm dependency compilation took 58.37 seconds; an incremental matrix
+build took 24.20 seconds; the final persistent recipe rebuild took 10.51 seconds.
+The final one-tool crash fixtures produced 13–16 groups and
+365,033–654,462 bytes per log. Reopen plus completion took 0.191–2.817 seconds,
+including configured retry delay where applicable. These are fixture observations,
+not a cold-build benchmark or a performance improvement claim. Grouped appends
+avoid rewriting the entire physical log, but the required state currently repeats
+accumulated operation snapshots. Retention/compaction remains future work.
+
+Known ECS failures reproduced on the unchanged baseline: Unix footprint-path
+expectations in `a_footprint_a_plugin_declared_on_a_call_stands`,
+`a_held_call_holds_back_only_the_calls_that_touch_what_it_writes`,
+`gate_sees_footprint_paths_normalized`, plus
+`a_stopped_call_says_whether_it_ran_and_whether_it_may_have_changed_something`.
+No full-suite-green claim is made. Raw logs/reports are retained in the ignored
+`.workspace/d0-d1` and `.workspace/d0/fork-probe` directories.
+
+This proves the bounded ordinary-process-crash contract, not OS/kernel/power-loss
+survival or a real provider's behavior. D1 uses ordinary conversation context for
+execution validation; D2 still must supply persona and asynchronous Recap-only
+publication. There is no persistent delegation, scheduled wake or AutoDream here.
+
+## Original research and later decision history
+
 Date: 2026-10-27. This is source research and a provisional direction, not an
 approved implementation plan or a measured performance claim. The owner asked
 how Prime and Pi store sessions and what the two Vivy harnesses should reuse.

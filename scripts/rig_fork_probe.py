@@ -21,6 +21,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def manifest_for(source: str, plugin: Path, rig: Path | None) -> str:
     parsed = tomllib.loads(source)
+    for section in ("dependencies", "dev-dependencies"):
+        for name,spec in parsed.get(section,{}).items():
+            if isinstance(spec,dict) and "path" in spec:
+                replacement=dict(spec,path=(plugin/spec["path"]).resolve().as_posix())
+                fields=", ".join(f"{k} = {json.dumps(v)}" for k,v in replacement.items())
+                source=re.sub(rf"(?m)^{re.escape(name)} = \{{[^\n]*\}}$",lambda _:f"{name} = {{ {fields} }}",source)
     if rig is not None:
         for section in ("dependencies", "dev-dependencies"):
             for name, spec in parsed.get(section, {}).items():
@@ -40,23 +46,36 @@ def manifest_for(source: str, plugin: Path, rig: Path | None) -> str:
                                        lambda _: f"{name} = {{ {fields} }}", source)
                 if count != 1:
                     raise ValueError(f"expected one inline dependency for {name}, found {count}")
-    return source + f'\n[lib]\npath = {json.dumps((plugin / "src/lib.rs").as_posix())}\n\n[workspace]\n'
+    source += f'\n[lib]\npath = {json.dumps((plugin / "src/lib.rs").as_posix())}\n\n[workspace]\n'
+    if rig:
+        # Optional Vivy gateway dependencies must use the same local Rig graph.
+        source += '\n[patch."https://github.com/0xPlaygrounds/rig"]\n'
+        metadata=json.loads(subprocess.check_output(["cargo","metadata","--offline","--no-deps","--format-version","1"],cwd=rig,text=True))
+        for package in metadata["packages"]:
+            name=package["name"]
+            if name=="rig" or name.startswith("rig-"):
+                path=Path(package["manifest_path"]).parent.as_posix()
+                source += f'{name} = {{ path = {json.dumps(path)} }}\n'
+    return source
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rig", type=Path)
+    parser.add_argument("--runtime", action="store_true", help="run D0 checkpoint and D1 runtime acceptance (requires --rig)")
     args = parser.parse_args()
     rig = args.rig.resolve(strict=True) if args.rig else None
+    if args.runtime and not rig:
+        parser.error("--runtime requires --rig")
     plugin = ROOT / "plugins/vivy-durable"
-    output = ROOT / ".workspace/d0" / ("fork-probe" if rig else "stock-fork-probe")
+    output = ROOT / ".workspace/d0-d1/consumer" if args.runtime else ROOT / ".workspace/d0" / ("fork-probe" if rig else "stock-fork-probe")
     output.mkdir(parents=True, exist_ok=True)
     manifest = output / "Cargo.toml"
     manifest.write_text(manifest_for((plugin / "Cargo.toml").read_text(encoding="utf-8"),
                                      plugin, rig), encoding="utf-8")
     shutil.copyfile(plugin / "Cargo.lock", output / "Cargo.lock")
     report = {"status": "running", "rig": str(rig) if rig else "pinned upstream",
-              "scope": "serialization failure and existing D0 characterizations; no sync receipt"}
+              "scope": "D0 checkpoint + D1 runtime; process-crash only" if args.runtime else "serialization failure and existing D0 characterizations; no sync receipt"}
     if rig:
         report["revision"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=rig, text=True).strip()
         diff = subprocess.check_output(["git", "diff", "HEAD", "--"], cwd=rig)
@@ -66,7 +85,7 @@ def main() -> int:
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     environment = probe_environment(os.environ)
     command = ["cargo", "test", "--offline", "--manifest-path", str(manifest),
-               "--features", "rig-fork-probe"]
+               "--features", "runtime,checkpoint-probe" if args.runtime else "rig-fork-probe"]
     with (output / "tests.log").open("w", encoding="utf-8") as log:
         result = subprocess.run(command, cwd=output, env=environment, stdout=log,
                                 stderr=subprocess.STDOUT, timeout=600)

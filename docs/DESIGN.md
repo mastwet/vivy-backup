@@ -1,9 +1,51 @@
 # Decisions and assembly direction
 
+## D0/D1 implementation boundary (2026-10-31)
+
+The local Rig fork now supplies the missing D0 checkpoint seams; Vivy's separate
+`runtime` feature and `persistent-agent.yaml` exercise D1 on that shared execution
+path. This supersedes the older "D0 blocked / implementation pending" status
+below, for the explicit local `--rig-path` build only. Production Rig pins remain
+unchanged. See [HANDOFF](HANDOFF.md#d0d1-local-runtime-2026-10-31) for commands and
+executed acceptance; final review is recorded with the implementation plan.
+
+- Rig `CheckpointStore` groups each logical append into a checksummed physical
+  record, returning its exact bytes, lineage, sequence and length. Only incomplete
+  final groups may be recovered; complete corruption is refused. No second task
+  database, whole-history rewrite per checkpoint, or sync guarantee is introduced.
+- Required saved keys and versions are checked before writer repair. Conversation,
+  task state, intent and outcome records share the frame's append. Write failure
+  latches the original cause and prevents further dispatch/publication.
+- Opt-in Rig `PersistOutcomes`/`Finalize` holds final redacted effect and turn
+  outcomes until the host acknowledges that exact snapshot. Human stop still
+  removes running work immediately. Ordinary coding agents retain their behavior.
+- Vivy saves one `DurableAgentState` per agent: stable task/source/request identity,
+  generation, frozen operations, retry attempts/deadlines, outcomes and task control.
+  Admission and final output wait for matching committed state. Saved outcomes are
+  reinjected through Rig; interrupted model requests reuse Rig retry policy, while
+  an interrupted tool without a result stays unknown and is never blindly resent.
+  The agent can inspect evidence and resolve that uncertainty without erasing it.
+- Tools run serially. New task input enters the existing Rig inbox; after the
+  current individual tool, unstarted siblings close with explicit not-run results.
+  The agent chooses continue/switch/defer/finish silently. Human cancellation is
+  generation-fenced and survives restart. Controls bind both their origin and
+  target generations; stop invalidates pending controls and withdraws undelivered
+  inputs even after inbox acceptance. Ending a task preserves a foreground
+  decision opportunity for already-delivered queued input without duplicating its
+  text. Human stop suppresses that continuation. There is no persistent delegation.
+
+The minimal D1 recipe deliberately uses ordinary conversation context until D2.
+It is **not yet the agreed persona + asynchronous Recap-only assistant**. D2 must
+replace that context policy and inspect actual outgoing requests; it must work
+without retrieval. Wake scheduling, AutoDream, NeuroLink/PEN integrations, coding
+session management and owner/outsider policy remain outside D1. The initial
+checkpoints retain accumulated operation state; long-run log growth and retention
+need measurement before claiming an economical always-on product.
+
 ## Requirements audit and owner rulings (2026-10-31)
 
-**Status: owner rulings accepted; runtime implementation and revised acceptance
-remain pending.** Following the requirements audit, the owner accepted items 1
+**Status: owner rulings accepted; D0/D1 implementation is recorded above.**
+Following the requirements audit, the owner accepted items 1
 and 2, corrected item 3, selected reuse for item 4 and deferred item 5. These
 rulings supersede the synthesis's stronger durability gate and any implication
 that the new persistent agent is an upgraded coding subagent or coding session.
@@ -35,8 +77,8 @@ Three textual corrections follow already explicit requirements:
    than removing them. Complete recoverable checkpoints, result-before-continuation
    ordering, required-state validation, writer ownership and uncertain-effect
    handling remain required. An arbitrary successful Rig append is not proof
-   of that contract. D0 remains blocked on those seams and a repeated acceptance
-   run; missing disk sync alone is no longer an initial blocker. This matches
+   of that contract. Those seams and repeated acceptance were the D0 gate, now
+   addressed in the local fork above; missing disk sync is not a blocker. This matches
    the smaller default scope documented at Pi `a14cdf90` (SQLite WAL/NORMAL;
    JSONL fsync off by default), without claiming identical implementation.
 
