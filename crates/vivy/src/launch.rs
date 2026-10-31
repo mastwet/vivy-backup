@@ -5,6 +5,7 @@ use rig_harness_protocol::{AgentDescription, Home, RELOAD_EXIT_CODE, SessionId, 
 use std::fs::{self, OpenOptions};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use vivy_process::session::{EXECUTION_LOCK, SessionGuard, clear_launcher_context};
 
 /// Pi's session options, which the launcher handles itself: the rest of
 /// the command line goes to the species.
@@ -79,7 +80,15 @@ fn session_name(value: &str) -> String {
 /// Copies the session directory `from` to `to`, without what belongs to
 /// the process running it: locks, a pending switch, its name.
 fn copy_session(from: &Path, to: &Path) -> std::io::Result<()> {
-    const LEFT_OUT: [&str; 5] = [".rig-memory.lock", "lock", "switch", "deleting", "name"];
+    const LEFT_OUT: [&str; 7] = [
+        ".rig-memory.lock",
+        "lock",
+        "launcher.lock",
+        EXECUTION_LOCK,
+        "switch",
+        "deleting",
+        "name",
+    ];
     fs::create_dir_all(to)?;
     for entry in fs::read_dir(from)? {
         let entry = entry?;
@@ -127,9 +136,7 @@ pub fn run(binary: &Path, args: &[String]) -> Result<u8> {
             describe.env_remove(name);
         }
     }
-    for name in env::AGENT_ONLY {
-        describe.env_remove(name);
-    }
+    clear_launcher_context(&mut describe);
     let status = describe
         .env(env::DESCRIBE, &description_file)
         .stdout(Stdio::null())
@@ -143,8 +150,10 @@ pub fn run(binary: &Path, args: &[String]) -> Result<u8> {
     let mut session = resume.map(|name| home.find(&name)).transpose()?;
     if let Some(original) = &options.fork {
         let original = home.find(original)?;
+        let source = SessionGuard::direct(home.session(&original))?;
         let copy = SessionId::generate();
-        copy_session(home.session(&original).path(), home.session(&copy).path())?;
+        let target = SessionGuard::direct(home.session(&copy))?;
+        copy_session(source.directory.path(), target.directory.path())?;
         session = Some(copy);
     }
     let mut made = Vec::new();
@@ -166,10 +175,31 @@ pub fn run(binary: &Path, args: &[String]) -> Result<u8> {
     );
     if options.ephemeral {
         for id in &made {
-            let _ = fs::remove_dir_all(home.session(id).path());
+            if let Err(error) = discard_ephemeral(home.session(id)) {
+                eprintln!("vivy: could not fully remove ephemeral session {id}: {error}");
+            }
         }
     }
     code
+}
+
+fn discard_ephemeral(directory: rig_harness_protocol::SessionDir) -> std::io::Result<()> {
+    if let Some(retired) = retire_ephemeral(directory)? {
+        if let Err(error) = fs::remove_dir_all(&retired) {
+            eprintln!("vivy: cleanup remains at {}", retired.display());
+            return Err(error);
+        }
+    }
+    Ok(())
+}
+
+fn retire_ephemeral(
+    directory: rig_harness_protocol::SessionDir,
+) -> std::io::Result<Option<std::path::PathBuf>> {
+    if !directory.path().try_exists()? {
+        return Ok(None);
+    }
+    SessionGuard::direct(directory)?.retire().map(Some)
 }
 
 /// Runs the species in `session`, then in each session it switches to.
@@ -185,7 +215,7 @@ fn run_sessions(
     loop {
         let id = session.take().unwrap_or_else(SessionId::generate);
         let dir = home.session(&id);
-        let _session_lock = dir.hold()?.ok_or("this session is already running")?;
+        let mut session_guard = SessionGuard::direct(dir.clone())?;
         let cwd = if reason == StartReason::Resumed {
             dir.working_directory()
                 .ok_or("the resumed session's working directory is unavailable")?
@@ -200,9 +230,8 @@ fn run_sessions(
             fs::remove_file(dir.switch())?;
         }
         let mut command = Command::new(binary);
-        for name in env::AGENT_ONLY {
-            command.env_remove(name);
-        }
+        clear_launcher_context(&mut command);
+        session_guard.hand_off_execution();
         let status = command
             .args(invocation.to_args())
             .current_dir(&cwd)
@@ -243,6 +272,49 @@ fn run_sessions(
 mod tests {
     use super::*;
 
+    #[test]
+    fn ephemeral_cleanup_cannot_remove_a_session_taken_by_another_owner() {
+        let root = std::env::temp_dir().join(format!("vivy-ephemeral-{}", SessionId::generate()));
+        let dir = rig_harness_protocol::SessionDir::at(root.join("sessions/session"));
+        let owner = SessionGuard::direct(dir.clone()).unwrap();
+        fs::write(dir.path().join("evidence"), "keep").unwrap();
+        let result = discard_ephemeral(dir.clone());
+        assert!(result.is_err(), "cleanup removed an actively owned session");
+        assert_eq!(
+            fs::read_to_string(dir.path().join("evidence")).unwrap(),
+            "keep"
+        );
+        drop(owner);
+        discard_ephemeral(dir.clone()).unwrap();
+        assert!(!dir.path().exists());
+        assert!(root.starts_with(std::env::temp_dir()));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn ephemeral_retirement_separates_cleanup_from_a_new_owner() {
+        let root = std::env::temp_dir().join(format!("vivy-retire-{}", SessionId::generate()));
+        let original = root.join("sessions/session");
+        fs::create_dir_all(&original).unwrap();
+        fs::write(original.join("old"), "old state").unwrap();
+        let directory = rig_harness_protocol::SessionDir::at(&original);
+        let retired = retire_ephemeral(directory.clone()).unwrap().unwrap();
+        assert!(
+            !original.exists(),
+            "cleanup still targets the live session pathname"
+        );
+        let next_owner = SessionGuard::direct(directory).unwrap();
+        fs::write(original.join("new"), "new state").unwrap();
+        fs::remove_dir_all(retired).unwrap();
+        assert_eq!(
+            fs::read_to_string(original.join("new")).unwrap(),
+            "new state"
+        );
+        drop(next_owner);
+        assert!(root.starts_with(std::env::temp_dir()));
+        fs::remove_dir_all(root).unwrap();
+    }
+
     fn strings(args: &[&str]) -> Vec<String> {
         args.iter().map(|arg| arg.to_string()).collect()
     }
@@ -276,6 +348,8 @@ mod tests {
             "directory",
             "started",
             ".rig-memory.lock",
+            "launcher.lock",
+            ".vivy-execution.lock",
             "name",
             "switch",
         ] {
@@ -287,6 +361,8 @@ mod tests {
             "directory",
             "started",
             ".rig-memory.lock",
+            "launcher.lock",
+            ".vivy-execution.lock",
             "name",
             "switch",
         ]

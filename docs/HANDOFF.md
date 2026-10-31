@@ -1,5 +1,51 @@
 # Handoff: continue the independent assembly experiment
 
+## D0 follow-up: session ownership enforced (2026-10-31)
+
+Following the owner's request to continue, the first local D0 gap is addressed.
+Generated executables acquire `vivy-process::session::SessionGuard` before Rig
+or recipe plugins are constructed. Direct runs own Rig's session lease and a
+small execution lock. A launcher keeps the session lease and hands execution to
+its checked child; the child validates its actual parent/run and held leases.
+An execution lock also protects the interval between launcher loss and child
+cleanup. It lives at `RIG_HOME/sessions.vivy-locks/<session-id>`, outside the
+deletable session directory; these small lock files are deliberately retained.
+This is trusted-process coordination, not a sandbox or durable commit.
+
+CLI fork holds both source and target, excludes process lock files, and refuses
+a running source before creating a copy. Ephemeral cleanup reacquires ownership,
+renames the directory under the external lock, then removes only the retired
+directory. It retains sessions owned by another process and cannot delete a new
+session created at the original path. Launcher children
+receive fresh protocol state; standalone nested execution that inherits only
+RIG_LAUNCHER remains supported. Host ownership is mandatory generated wiring;
+YAML still selects all optional plugin capabilities at compile time.
+
+Reproduce with `python scripts/session_ownership.py C:/vtd0/debug/vivy.exe`
+after the build commands in the [D0 evidence record](research/2026-10-27-session-storage.md#d0-execution-evidence-and-bounded-proposals-2026-10-31).
+The fixture covers competing launcher/direct processes, live-source fork, invalid
+handoff, normal exit, killed executable/launcher, nested entry and ephemeral cleanup.
+An empty `RIG_DESCRIBE` still requires ownership, matching Rig's describe predicate.
+Independent review found that bypass and a cleanup race; both have failing
+regressions followed by verified fixes. On Windows, holding an internal lock file
+prevented directory renaming, which is why the execution lock is external.
+
+The follow-up root suite passes 29 tests, including a deterministic retirement/
+new-owner interleaving; basics passes 82, D0 Rust probes 12 and Python checks 5.
+Builds and the assembled ownership fixture pass on Windows. The final D0 rerun
+returns the expected exit 2 with four gated starts and zero disk receipts.
+Earlier coding, provider, optional-recipe and terminal cancellation smokes also
+passed during this follow-up. This does not add non-Windows or real-provider evidence.
+
+Scope is generated entry, CLI fork and ephemeral cleanup. Upstream maintenance
+writers (`edit_stopped`, `rewrite_stopped`, `DeleteSession`) still check only Rig's
+session lease; they do not consult the external execution lock during the interval
+after launcher loss and before child exit. Arbitrary Store callers and old binaries
+are also outside this guard. Rebuild generated executables to adopt it.
+The D0 report now lists host ownership as supported; its remaining storage/result/
+required-state blockers still return exit 2. Keep D1 blocked. No Rig source patch,
+dependency upgrade, private Store or real-provider retry accompanies this change.
+
 ## D0 implementation and blocked persistence gate (2026-10-31)
 
 The [D0 plan](plans/2026-10-31-d0-rig-probes.md) is implemented. Every active Rig
@@ -41,8 +87,8 @@ and user environments were not changed. Full reproduction commands, patch-sized
 proposals and remaining unverified cases are in the
 [D0 evidence record](research/2026-10-27-session-storage.md#d0-execution-evidence-and-bounded-proposals-2026-10-31).
 
-**Next:** discuss/implement the bounded upstream seams and Vivy entry guards in
-that record, then repeat D0 before D1. The owner selected proposals on reproduced
+**Next:** discuss/implement the remaining bounded upstream seams in that record,
+then repeat D0 before D1. The owner selected proposals on reproduced
 gaps for this delivery; no private Store, upstream patch, issue/PR publication,
 push or deferred real-provider retry was performed. Older entries below describe
 their own dated checkpoints; their "next plan" and "pin unchanged" statements do

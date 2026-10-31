@@ -149,11 +149,10 @@ def entry_paths(builder, binary, root, home, server):
         second = run(builder, "--resume", owned.name, "-p", "D0_SIMPLE")
         assert second.returncode != 0 and "already running" in second.stderr, second.stderr
         assert len(server.records) == count
-        # Direct species execution with explicit RIG_SESSION assumes a host
-        # owns that session; the species itself does not acquire that lease.
+        # Generated mains now acquire ownership before constructing the app.
         direct = run(baseline, "-p", "D0_SIMPLE", session=owned)
-        assert len(server.records) > count, direct.stderr
-        assert direct.returncode == 0, (direct.stdout, direct.stderr)
+        assert len(server.records) == count, direct.stderr
+        assert direct.returncode != 0 and "already running" in direct.stderr, direct.stderr
     finally:
         server.release.set()
         try:
@@ -165,7 +164,7 @@ def entry_paths(builder, binary, root, home, server):
             "missing_probe_plugin_resume_and_fork": "accepted (gap)",
             "malformed_probe_state": "accepted (gap)",
             "second_launcher": "refused before model request",
-            "direct_species_with_same_session": "reached model while launcher held session (gap)"}
+            "direct_species_with_same_session": "refused before model request"}
 
 
 def main():
@@ -243,7 +242,8 @@ def main():
             "entry_paths": entries,
             "fixture_isolation": "inherited Rig controls stripped; outside sentinels unchanged",
             "supported": ["multi-pass holds", "exact observed-write matching",
-                          "request/route/generation invalidation", "native stop and CarryOn opt-in"],
+                          "request/route/generation invalidation", "native stop and CarryOn opt-in",
+                          "launcher and generated species session ownership"],
             "gaps": [
                 {"id": "sync", "evidence": "source inspection at the pinned revision",
                  "finding": "DirStore append uses write_all without sync; no disk receipt was exercised."},
@@ -253,8 +253,6 @@ def main():
                  "finding": "Invalid or unregistered required state does not refuse the session."},
                 {"id": "serialization", "evidence": "Rust characterization",
                  "finding": "A failed saved component can be omitted while the other log write succeeds."},
-                {"id": "ownership", "evidence": "Rust characterization and actual launcher/species processes",
-                 "finding": "Launcher lease works; direct species execution with RIG_SESSION bypasses ownership."},
             ],
             "unverified": ["power-loss durability", "full D1 crash matrix",
                            "real provider", "production cancellation generations",

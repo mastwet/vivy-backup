@@ -10,9 +10,17 @@ The normal recipe does not compile the probe plugin.
 
 **D0 investigation is delivered; the persistence gate remains blocked.**
 Successful ordinary-write gating is not durable commit acknowledgement. Final
-redacted-result gating, synced bundle receipts, fail-closed required state and
-coverage of every writer entry remain missing. The real launcher already rejects
-a second owner, but a directly executed species can bypass that ownership.
+redacted-result gating, synced bundle receipts and fail-closed required state
+remain missing. The subsequent local entry fix applies session ownership before
+any plugin is built: direct execution takes the lease, while a launcher retains
+its lease and hands execution to a child that validates the parent's run. A small
+execution lock prevents duplicate children and covers launcher-loss cleanup.
+CLI fork and ephemeral cleanup also require ownership. The execution lock lives
+outside the session tree; cleanup retires the owned directory before deleting it,
+so it cannot remove a new session at the original path. This closes the reproduced
+direct-entry bypass for newly generated binaries, without changing Rig's loop.
+Upstream maintenance writers still consult only Rig's lease; the extra lock does
+not cover those writers during the launcher-loss/child-cleanup interval.
 See [executed evidence and bounded proposals](research/2026-10-27-session-storage.md#d0-execution-evidence-and-bounded-proposals-2026-10-31).
 The owner selected reproduction/proposal delivery at these gaps, without an
 automatic private Store, Rig fork or upstream patch implementation. D1 stays

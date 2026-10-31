@@ -3529,6 +3529,7 @@ name = "vivy-process"
 version = "0.1.0"
 dependencies = [
  "libc",
+ "rig-harness-protocol",
  "toml",
  "windows-sys 0.61.2",
 ]

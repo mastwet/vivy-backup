@@ -5,6 +5,7 @@ use std::process::{Child, Command};
 use std::sync::Arc;
 
 mod credentials;
+pub mod session;
 pub use credentials::{
     credential_policy_generation, credential_variables, filter_credentials,
     register_credential_variables, variables_from_file,

@@ -21,6 +21,59 @@ Rig logs only as a conditional fallback after D0. The baseline's commit/recovery
 contract and explicitly unproven integration seams take precedence over older
 implementation suggestions below; this research is not runtime validation.
 
+## D0 follow-up: local ownership (2026-10-31)
+
+The continued implementation closes the host ownership gap reproduced below.
+`vivy-process::session` now supplies a guard to the launcher and every generated
+main, before app construction. Direct entry holds `SessionDir::hold` plus an
+execution lock. A launcher retains the former across preparation/run/switching
+and a checked child holds the latter. The child verifies the actual parent PID,
+canonical run directory and held parent run/session leases. The second lock
+prevents duplicate children and reentry during cleanup after a launcher dies.
+It resides outside the session tree at `RIG_HOME/sessions.vivy-locks/<session-id>`;
+small lock files remain in place so unlinking cannot create a second lock identity.
+This is coordination of trusted executables, not authentication of hostile code.
+
+Fork takes both source/target guards and copies no process lock files; a live
+source is refused before creating a target. A regression also reproduced that
+ephemeral cleanup could delete a session another owner had acquired. Cleanup now
+takes both guards and reports retention instead of deleting an active session.
+Under the external execution lock it releases the internal lease, atomically
+renames the session to a unique `.vivy-deleted-*` sibling, then deletes that path.
+A new owner at the original path is unaffected. Failed removal reports the retired
+path for cleanup. An internal execution lock prevented renaming on Windows;
+the external namespace avoids that limitation without an unlocked deletion window.
+Description-only runs acquire no session only for a nonempty `RIG_DESCRIBE`,
+matching Rig. An empty value cannot bypass ownership. Nested binaries inheriting only a
+launcher path remain ordinary direct runs. Runtime/credential selection and YAML
+optional plugin selection retain their existing roles. Regenerate/rebuild old
+binaries to gain this protection; arbitrary callers of DirStore are not covered.
+Upstream maintenance writers (`edit_stopped`, `rewrite_stopped`, `DeleteSession`)
+still consult only the Rig lease, not the external lock. Their behavior after
+launcher loss but before child cleanup remains a coverage limitation; this change
+does not claim universal writer exclusion or alter those upstream paths.
+
+`scripts/session_ownership.py` uses actual processes and a local scripted gateway.
+It verifies that refusals precede requests and logical log changes, that no failed
+live-source fork leaves a target, and that normal exit and killed processes free
+the locks. It checks inherited launcher-control isolation, nested direct execution
+and ephemeral deletion too. `scripts/durable_probe.py` now requires direct-entry
+refusal and reports ownership as supported. Sync, final-result and required-state
+gaps remain; this change does not deliver D1 or durable fork/rewind lineage.
+Independent review reproduced an empty-description bypass and a recursive-delete
+race; both were fixed with regressions. A deterministic test retires a directory,
+opens a new owner at its old path, and verifies deletion preserves the new state.
+The root suite passes 29 tests; the actual ownership fixture and recipe build pass
+on Windows. Generated wiring bridges SessionDir by path rather than sharing a type
+across the host's fixed Rig source and the recipe's selected Rig source; this is
+not evidence that arbitrary new Rig revisions are compatible.
+
+An upstream recheck found two commits after the audited pin: a catalog/provider
+update and the 0.46.0 release, ending at `6e039cd24994bc1e7d963af6f6278df73a81b130`.
+The [exact comparison](https://github.com/0xPlaygrounds/rig/compare/fc556f982d501eea9d7167398a19386e4884e776...6e039cd24994bc1e7d963af6f6278df73a81b130)
+contains no ECS, memory or host implementation changes for these gaps. The current
+pin stays unchanged; this is source comparison, not runtime validation of 0.46.0.
+
 ## D0 execution evidence and bounded proposals (2026-10-31)
 
 The [D0 plan](../plans/2026-10-31-d0-rig-probes.md) is implemented against
@@ -120,6 +173,9 @@ Keep the ordinary coding defaults intact and negotiate the generic seams with Ri
    lacking its capabilities. Fork/rewind need fresh execution lineage and no
    copied live obligations. The existing baseline CLI fork copies unknown probe
    state; no production durable lineage or rewind guarantee is claimed here.
+   **Follow-up:** the local entry, CLI fork and ephemeral cleanup ownership part
+   is implemented above. Durable format/lineage and upstream maintenance-writer
+   coverage remain open.
 
 Precise source starting points at the audited commit:
 [`dir.rs`](https://github.com/0xPlaygrounds/rig/blob/fc556f982d501eea9d7167398a19386e4884e776/crates/rig-memory/src/dir.rs)

@@ -116,6 +116,11 @@ impl Recipe {
         let selected: BTreeSet<&str> = self.components.iter().map(|c| c.krate.as_str()).collect();
         for component in &self.components {
             let name = &component.name;
+            if component.krate == "vivy-process" {
+                return fail(
+                    "vivy-process is reserved for generated session ownership, not a selectable plugin crate",
+                );
+            }
             if !names.insert(name.as_str()) {
                 return fail(format!("component `{name}` is listed twice"));
             }
