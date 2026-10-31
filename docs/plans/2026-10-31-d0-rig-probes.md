@@ -4,6 +4,23 @@ Status: implemented and independently reviewed; findings fixed with regressions.
 D0 persistence gate: blocked by
 reproduced gaps. Spec: [architecture baseline](../DESIGN.md#preliminary-detailed-architecture-baseline-2026-10-31).
 
+**Owner scope amendment, 2026-10-31:** initial persistence guarantees ordinary
+process-crash recovery, not survival of OS/power/filesystem failure. Missing sync
+alone is no longer a gate. Complete recoverable bundles, precise checkpoint
+acknowledgement, final-result ordering and required-state validation remain
+required; existing successful ordinary appends do not prove them. Keep prior probe
+reports as historical evidence and rerun the revised acceptance after the missing
+seams are implemented. This document amendment does not make D0 pass or change
+the diagnostic tests' existing results.
+
+The first persistent agent is a new lifecycle on the shared core, separate from
+coding subagents. It excludes persistent delegation, parent/child joins and
+coding-session creation/management. Existing coding/subagent regression checks
+below protect that separate capability; they are not durable-delegation acceptance.
+Reusing the coding face is a validation convenience. Subsequent D2 uses asynchronous
+Recap-only publication; existing resource controls are reused and owner/outsider
+policy is deferred. See the [owner rulings](../DESIGN.md#requirements-audit-and-owner-rulings-2026-10-31).
+
 The owner chose to upgrade first to the inspected Rig commit
 `fc556f982d501eea9d7167398a19386e4884e776`. The shorter, mistyped hash in the
 conversation plan is not a second candidate. Keep Rust 1.97.1 and Bevy 0.20.0.
@@ -23,7 +40,8 @@ conversation plan is not a second candidate. Keep Rust 1.97.1 and Bevy 0.20.0.
    evidence, including negative reproductions. Do not ignore failing contracts.
 4. Run a synthetic loopback coding task through the actual assembled executable.
    Derive its temporary recipe from the baseline. Use isolated homes and files,
-   observe event ordering, and never substitute mock sync for disk evidence.
+   observe event ordering and actual process-restart recovery; mocked writes
+   cannot establish recoverable checkpoints. Stronger sync evidence is separate.
 5. Record exact upstream-sized gaps and proposed changes in the existing
    session-storage research, and update DESIGN/HANDOFF with verified limits.
 

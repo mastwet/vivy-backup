@@ -21,6 +21,16 @@ Rig logs only as a conditional fallback after D0. The baseline's commit/recovery
 contract and explicitly unproven integration seams take precedence over older
 implementation suggestions below; this research is not runtime validation.
 
+**Owner scope amendment, 2026-10-31:** the
+[accepted audit rulings](../DESIGN.md#requirements-audit-and-owner-rulings-2026-10-31)
+select ordinary process-crash recovery for the first persistent agent. Stronger
+synced durability is a later option. The executed D0 tables retain the exact
+observations under the original contract; missing sync is no longer by itself a
+first-phase blocker. Complete checkpoint/result ordering and required-state
+validation still need implementation and acceptance. Coding subagents and coding
+sessions are separate facilities, not part of first-phase persistent delegation.
+No runtime or test-result change accompanies this amendment.
+
 ## Rig fork: saved serialization failure (2026-10-31)
 
 After the local ownership fix, the owner authorizes source changes in
@@ -204,18 +214,22 @@ configuration revision, without serializing credential values.
 ### Proposed changes and ownership
 
 These are bounded proposals, not APIs that exist or patches already submitted.
-Keep the ordinary coding defaults intact and negotiate the generic seams with Rig.
+The receipt proposal below reflects the subsequent owner-selected process-crash
+target; the executed evidence above is unchanged. Keep ordinary coding defaults
+intact and negotiate the generic seams with Rig.
 
 1. **Opt-in committed saved bundle and receipt (Rig ECS + memory).** Add a
    fallible checkpoint operation that serializes the required component set and
    associated conversation changes before any of that bundle is released. Bind
    the acknowledgement to store/session, agent, operation, request digest,
    generation and revision; an unrelated flush or has_written is insufficient.
-   An opt-in Store commit must report successful sync, propagate append/sync
-   errors, and make a partly persisted bundle uncommitted on recovery. Preserve
-   existing fast appends for ordinary sessions. First acceptance: fault injection
-   at serialization, append and sync never grants dispatch; a complete synced
-   bundle is granted once; cross-log atomicity is not silently promised.
+   An opt-in checkpoint commit must acknowledge the complete recoverable bundle,
+   propagate storage errors and make a partial bundle uncommitted on recovery.
+   A process-local buffer or unrelated append is insufficient. Preserve existing
+   ordinary-session behavior. First acceptance: serialization/append failure and
+   interrupted writes never release an uncommitted checkpoint; a complete bundle
+   is released once and recovered after process death. Stronger sync is later
+   opt-in work; cross-log atomicity and power-loss survival are not promised.
 2. **Final redacted outcome gate (Rig ECS).** Expose an ordered phase after the
    kernel's final redaction and before Settled/transcript publication or successor
    dispatch. A result held there must remain frozen or invalidate its receipt

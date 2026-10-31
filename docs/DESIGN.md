@@ -1,14 +1,14 @@
 # Decisions and assembly direction
 
-## Requirements audit and proposed rulings (2026-10-31)
+## Requirements audit and owner rulings (2026-10-31)
 
-**Status: audit delivered; the five rulings below are recommendations, not new
-owner decisions.** The owner requested a check for assumptions similar to the
-recent Recap/recall conflation. This audit compares the explicit discussion with
-the current baseline, D0 plan, selected code paths and local reference sources.
-An approved high-level direction does not make every synthesis default an
-independently requested behavior. Unimplemented capability is not itself a
-contradiction. No runtime or acceptance gate changes with this audit.
+**Status: owner rulings accepted; runtime implementation and revised acceptance
+remain pending.** Following the requirements audit, the owner accepted items 1
+and 2, corrected item 3, selected reuse for item 4 and deferred item 5. These
+rulings supersede the synthesis's stronger durability gate and any implication
+that the new persistent agent is an upgraded coding subagent or coding session.
+Existing test results remain evidence of what was run, not a pass under the
+revised contract.
 
 Three textual corrections follow already explicit requirements:
 
@@ -25,75 +25,59 @@ Three textual corrections follow already explicit requirements:
   hook-disabled items remain filtered or available through their source and,
   later, the inbox. The agent controls subscriptions; NeuroLink transports events.
 
-### Choices requiring explicit review
+### Accepted scope and responsibility
 
-1. **Initial durability level.** The [storage contract](#3-storage-and-the-actual-commit-unit)
-   makes synced commits mandatory. This is stronger than Pi durable's default
-   process-crash contract at local revision `a14cdf90`: its README's backend table
-   describes SQLite WAL with `synchronous=NORMAL`, and `docs/spec.md`'s JSONL
-   section defaults `fsync` to false. Even its optional JSONL sync is not a
-   blanket guarantee that every acknowledged tail commit survives power loss.
-   Choose **A (recommended): ordinary process-crash recovery for the initial
-   acceptance**, with explicit limits for OS/power/filesystem failure and stronger
-   sync as a later opt-in; or B: retain the current synced-commit gate now.
-   A changes a previously synthesized guarantee and therefore needs an owner
-   ruling. It does not remove complete recoverable checkpoints, final-result
-   gating, required-state validation, writer ownership or uncertain-effect
-   handling. Ordinary Rig appends have not proved even that complete contract.
-   Keep the existing D0 evidence and failed-gate status until a revised contract
-   is approved and independently exercised; no instant unblock is implied.
+1. **Ordinary process-crash recovery first.** Initial acceptance covers process
+   termination/restart while the OS and filesystem remain available; survival of
+   power, OS/kernel or filesystem failure is not promised. Stronger synced
+   durability may be added later as an opt-in, without requiring a new profile
+   framework now. Reuse existing sync/replacement helpers where useful rather
+   than removing them. Complete recoverable checkpoints, result-before-continuation
+   ordering, required-state validation, writer ownership and uncertain-effect
+   handling remain required. An arbitrary successful Rig append is not proof
+   of that contract. D0 remains blocked on those seams and a repeated acceptance
+   run; missing disk sync alone is no longer an initial blocker. This matches
+   the smaller default scope documented at Pi `a14cdf90` (SQLite WAL/NORMAL;
+   JSONL fsync off by default), without claiming identical implementation.
 
-2. **Recap freshness between new turns.** The [context policy](#7-persona-recap-and-memory-integration)
-   uses only committed Recap but leaves the update trigger conditional. A new
-   turn can consequently omit recently completed dialogue while synthesis is
-   pending. Mysoul `3a7cbde7` permits this: `test_recap_only_context.py` retains
-   pending sources without adding them to a new turn; `cognition.py::run_due`
-   publishes later, separately from owner turns. Choose **A (recommended for
-   reference fidelity): asynchronous updates with potentially lagging committed
-   Recap**, explicit pending/failed coverage and no raw-history fallback; or B:
-   require coverage through the previous completed turn before a new independent
-   answer, accepting summary latency/cost and a summary-failure wait. Neither
-   choice changes the active task's tool context or enables automatic recall.
-   Recap maintenance must remain runnable without AutoDream or global idle
-   autonomy; sharing their implementation is not a prerequisite.
+2. **Asynchronous Recap publication.** New turns use the latest committed Recap;
+   they do not wait for synthesis to cover the last completed turn. Recent
+   material may therefore be absent until publication. Preserve pending sources
+   and expose pending/failed coverage; never silently inject a raw-chat tail or
+   automatic recall. The active task keeps its tool context. Recap maintenance
+   runs independently of AutoDream and the global idle-autonomy switch. Mysoul
+   `3a7cbde7`'s Recap-only tests and `cognition.py::run_due` are the reference for
+   this asynchronous behavior, not a requirement to copy its full workflow.
 
-3. **First durable delegation and concurrency scope.** The [initial control surface](#2-identity-state-and-the-minimum-control-surface)
-   serializes one agent's tools and refuses unsupported durable delegation.
-   The current coding recipe already has native delegation/parallel workflows;
-   the first durable slice would therefore have less capability in this area.
-   A single-tool handoff requirement does not inherently require permanent
-   serialization. Choose **A (recommended): retain these limits only for the
-   single-agent D1 recovery acceptance**, explicitly defer recoverable child
-   joins and retain the ordinary coding recipe; or B: include a minimal native
-   parent/child recovery case in the first durable acceptance. Do not describe
-   A as full coding-capability parity or remove native delegation from the
-   product direction. Long-lived body actions and AD-2 validation may still use
-   owned jobs; a serialized submission tool need not block on their lifetime.
+3. **A new persistent agent, separate from coding delegation.** Coding subagents
+   and the persistent agent are different facilities. Build the latter's own
+   lifecycle/task state on the selected shared Vivy/Rig core; do not convert
+   coding sessions or treat native coding delegation as its implementation.
+   The first phase excludes persistent-agent delegation, parent/child joins and
+   creating/managing coding sessions. Existing coding subagents remain unchanged;
+   they are not a parity target or a missing feature of this first phase. Reuse
+   of the coding face means host/input/tool validation only, not coding-session
+   orchestration. Rig's storage term "session" still names an execution container,
+   not an inclusion of product-level coding sessions. The owner's future preference
+   is for a persistent agent to delegate to/manage coding sessions, whose coding
+   agent owns its subagents, instead of directly managing those subagents. This is
+   a preference for later design, not a selected API or first-phase deliverable.
+   AD-2's internal Dream context and owned validation jobs remain distinct from
+   general delegated agents; its already selected later workflow is unchanged.
 
-4. **Resource limits versus behavioral rules.** The synthesis chooses one model
-   recovery retry, a minimum self-wake interval and per-task budgets. These are
-   engineering defaults, not separately requested owner policies. Recommend
-   configurable, visible limits using Rig's existing controls where possible;
-   distinguish transient-failure retry limits from a long-lived activity budget.
-   Exhaustion records a pause with its cause, not task success or a new rule that
-   the companion must leave the world. Keep idle autonomy off by default without
-   disabling an enabled game's continuation, Recap maintenance or an admitted
-   Dream run. The choice is these explicit resource controls versus retaining
-   the synthesis's numeric/default policy as a fixed first profile; do not copy
-   mysoul's fatigue/daily routine or add a behavior policy engine.
+4. **Reuse existing autonomy/resource controls; defer other mechanisms.** Prefer
+   applicable Rig/host limits and retry facilities. The synthesis's one-retry
+   default, new minimum wake interval and per-activity budget mechanism are not
+   locked requirements. Do not build a new control system or select numeric
+   defaults in this decision. Existing human stop and the idle-autonomy-off
+   default remain; richer behavior rules and resource policies are later work.
 
-5. **Owner versus outsider context.** The [adapter contract](#integration-contracts-retained-by-the-baseline)
-   identifies participants and filters groups, but does not yet say which Recap
-   or memory content an outsider's conversation receives. This is an unresolved
-   scope question, not evidence of a current leak: QQ integration is unbuilt.
-   Mysoul `laputa.py::ContextAssembler.base_bundle` and `refresh_recap_context`
-   include subject Recap only for `scope.audience == "owner"`. Recommend that
-   private owner Recap and private memory are not automatically projected into
-   outsider/group conversations; persona may be shared, and sharing history
-   requires an explicit scope choice. This must cover tool reads as well as
-   prompt assembly; hiding a prompt block alone is insufficient. The alternative
-   is intentionally shared conversation history. Reuse concrete participant/
-   conversation bindings rather than build a universal permission platform.
+5. **Defer owner/outsider differentiation.** Do not implement role classification,
+   different Recap projections or role-scoped memory policy in this phase, and
+   do not make them a D2 or adapter acceptance gate now. Ordinary source and
+   participant IDs still serve routing/correlation. Neither the audit's proposed
+   isolation policy nor an intentionally shared-history policy is selected.
+   This deferral does not change explicit human interruption or task ownership.
 
 ### Conformance and delivery boundaries
 
@@ -154,10 +138,12 @@ stop-on-restore policy; no global CarryOn or second execution loop is introduced
 The normal recipe does not compile the probe plugin.
 
 **D0 investigation is delivered; the persistence gate remains blocked.**
-Successful ordinary-write gating is not durable commit acknowledgement. Final
-redacted-result gating, synced bundle receipts and fail-closed required state
-remain missing. The subsequent local entry fix applies session ownership before
-any plugin is built: direct execution takes the lease, while a launcher retains
+Successful ordinary-write gating is not a complete checkpoint acknowledgement.
+Final redacted-result gating, process-crash-recoverable bundle receipts and
+fail-closed required state remain missing. Disk sync is now a later stronger
+option under the owner ruling above. The subsequent local entry fix applies
+session ownership before any plugin is built: direct execution takes the lease,
+while a launcher retains
 its lease and hands execution to a child that validates the parent's run. A small
 execution lock prevents duplicate children and covers launcher-loss cleanup.
 CLI fork and ephemeral cleanup also require ownership. The execution lock lives
@@ -191,17 +177,17 @@ adding equivalents, and defer infrastructure without a concrete first consumer.
 
 | Area | Locked direction | First implementation boundary |
 | --- | --- | --- |
-| Assembly and execution | One Rust/Vivy core; YAML selects compiled components; Plan B extends the existing Rig model/tool chain. | A durable-enabled recipe using the coding face; retain the legacy recipe's behavior. |
-| Durability | Persist admissions, intents, outcomes and continuation state; unsafe uncertain effects are reconciled, not blindly replayed. | Rig primitives and bounded upstream fixes first; a private framed Store is conditional on D0 evidence. |
-| Agent control | Agent chooses continue/switch/defer/ask/silence; ordinary handoff follows one completed tool, human immediate stop remains available. | One foreground decision and serialized tools per agent; no general durable child joins yet. |
+| Assembly and execution | One Rust/Vivy core; YAML selects compiled components; Plan B reuses the Rig model/tool chain for a new persistent agent. | Reuse the coding face for validation; no coding-session conversion or management in the first phase. |
+| Durability | Persist admissions, intents, outcomes and continuation state; unsafe uncertain effects are reconciled, not blindly replayed. | Ordinary process-crash recovery; Rig primitives and bounded fixes first. Stronger sync is later opt-in; a private framed Store remains conditional on D0 evidence. |
+| Agent control | Agent chooses continue/switch/defer/ask/silence; ordinary handoff follows one completed tool, human immediate stop remains available. | One foreground decision; initial tool serialization is an implementation simplification, not a product-wide concurrency rule. No persistent delegation or coding-session control. |
 | Persona | Laputa is the specification/governance boundary; one native workspace persona authority feeds the top-level persona block. | Small Rust integration; no Garden service or second identity store. |
-| Context | Rust/Rig owns effective context, Recap coverage/publication and compaction. | Existing coding policy; assistant cross-turn history is committed Recap only, with current input and activity context. No automatic retrieval or raw-chat tail. |
+| Context | Rust/Rig owns effective context, Recap coverage/publication and compaction. | Existing coding policy; assistant cross-turn history uses the latest committed Recap, updated asynchronously, with current input/activity context. No automatic retrieval or raw-chat tail. |
 | Long-term memory | Full Python-native MemPalace remains authoritative, behind a replaceable consumer boundary. | Reuse remember/get/search and stable source/event identities; no new backend or mirrored memory database. |
 | Waiting | Saved one-shot deadlines; a live host delivers wakes; generic idle autonomy defaults off. | Explicitly admitted work may continue or schedule a wake; no daemon or general cron requirement. |
 | Evolution | AutoDream AD-2: separate Dream context, file revisions, host-owned background validation and automatic adoption. | Persona and executable Skill adoption, actual subsequent use and feedback; no mandatory reviewer or per-candidate approval. |
 | External abilities | PEN packages deliver complete capabilities; NeuroLink connects conversations/events and loads adapted channel packages. | Reuse compiled workbench/MCP/Skill support; these interfaces do not own an agent lifecycle. |
 | First integrations | Octos official QQ only; separate NapCat browsing through its existing data; Minecraft independent multiplayer companion first. | Adapter/API details and game backend remain separate integration decisions; client control is a retained second route. |
-| Delegation | Existing native Rig delegation remains the baseline; APIX/apixis may later provide optional library-level composition. | No second agent runtime, compulsory cross-language Rig bridge or durable graph engine. |
+| Delegation | Existing coding subagents remain a separate coding capability; optional APIX library composition is later work. | First persistent phase has no delegation or coding-session orchestration. Future preference: manage coding sessions rather than their subagents; not a locked implementation. |
 | Product and later features | Product navigation/Diva packaging remain parked; official inbox/general hooks remain later-phase. | Neither is a prerequisite for internal task completion, wake delivery or AutoDream. |
 
 The original compact-context suggestion is superseded by the assistant context
@@ -276,8 +262,9 @@ The owner selects Plan B from the
 architecture alternatives. Complete one Vivy core by adding persistent execution
 phases, commit boundaries, recovery and sleep/wake behavior within the existing
 Rust/Rig execution chain. Validate
-through the current coding face. Durable execution is a general agent capability
-usable by coding and assistant workloads; their product entry points stay open.
+through the current coding face as a validation surface. The new persistent
+agent has its own lifecycle on that shared core. Coding subagents and coding
+sessions remain separate; converting or managing them is outside the first phase.
 
 ### Alternatives and rationale
 
@@ -330,8 +317,9 @@ separate execution context and declared version-activation boundary.
 - Persist sleep deadlines and resume positions. A live host timer or host wakeup
   remains necessary. Waking gives the agent a decision opportunity; speaking is
   optional. Do not add a model call merely to advance every mechanical step.
-- Keep JSON/JSONL as the storage direction, with commit framing, sync, ownership
-  and recovery details to design. Python namespaces remain ephemeral across
+- Keep JSON/JSONL as the storage direction, with complete commit framing,
+  ownership and process-crash recovery. Stronger sync is a later option.
+  Python namespaces remain ephemeral across
   worker restart; explicit artifacts survive and arbitrary cells do not replay
   automatically. Memory-engine internals retain their own storage authority.
 
@@ -442,7 +430,7 @@ flowchart TD
     A[Existing coding face / host input] --> B[Durable admission and handoff]
     B --> C[Existing Rig model and tool execution]
     C --> D[Commit and recovery gates]
-    D --> E[Rig logs and saved state with verified commit receipts]
+    D --> E[Rig logs and saved state with process-crash commit receipts]
     E --> B
     F[Laputa persona + agent context / Recap] --> C
     C --> G[Existing Python workbench / MemPalace]
@@ -456,10 +444,12 @@ flowchart TD
 
 The YAML recipe selects these compiled capabilities. A recipe without durable
 support continues using the existing execution chain with its existing storage
-contract. Settings configure selected capabilities, such as wake budgets; they
-do not replace compile-time selection. The first durable recipe reuses the
-coding face and tools. This is not a second assistant engine or a product-mode
-switch. Kernel persistence can work without Python or a memory backend.
+contract. Settings configure selected capabilities and reuse applicable host
+controls; they do not replace compile-time selection. The first persistent-agent
+recipe reuses the coding face and tools for validation, without selecting the
+coding subagent workflow or managing coding sessions. It provides a new agent
+lifecycle on the same core, not a second model/tool engine. Kernel persistence
+can work without Python or a memory backend.
 
 | Owner | Authority |
 | --- | --- |
@@ -503,7 +493,7 @@ Persist the deduplication data; process-local maps are insufficient.
 
 | Record | Minimum durable fields |
 | --- | --- |
-| Task | ID, agent, admitted input, parent if any, status, current step, generation, outcome/error, context references |
+| Task | ID, agent, admitted input, status, current step, generation, outcome/error, context references |
 | Operation | ID, Rig call mapping, kind, frozen request or argument reference, handler identity/version, replay policy, phase, result/error reference |
 | Input | ID, source/request key, payload digest and content/reference, target, arrival order, disposition |
 | Wake | ID, target task or agent, deadline in UTC, generation, reason, pending/fired/cancelled state |
@@ -518,8 +508,9 @@ Narrative Recap never substitutes for these fields.
 
 Internal Rust operations are `submit`, `cancel`, `schedule_wake`, `resolve` and
 `inspect`; names are provisional, and there is no generic public service API.
-The coding face uses these operations instead of admitting input outside the
-durable gate. An agent-facing `task_control` tool offers bounded actions:
+When used to exercise the persistent agent, the coding face uses these operations
+instead of admitting input outside the durable gate. This does not change ordinary
+coding-session admission. An agent-facing `task_control` tool offers bounded actions:
 continue the active task, switch to an admitted task, defer a task, arrange a
 wake, or finish silently. It returns typed control records with expected task
 generation; arbitrary text is not parsed as a state transition. Ordinary final
@@ -531,17 +522,18 @@ Switch/defer/finish also close every unstarted sibling call with `not_run`,
 commit that complete batch, and only then change the active task or end its
 turn. They obey the same closed-batch rule as incoming-input handoff below.
 
-One foreground decision runs per agent. The initial durable path serializes
-that agent's tools in model-declared order. Existing parallel subagents remain
-separate agents; recoverable parent/child joins are a later acceptance slice,
-not an excuse to label existing in-memory delegation durable. Unsupported
-delegation in the first durable slice must fail before dispatch with a clear
-reason. Existing non-durable recipe behavior is preserved.
+One foreground decision runs per agent. The initial persistent path serializes
+that agent's tools in model-declared order as a small implementation choice.
+The owner excludes persistent delegation and coding-session creation/management
+from this phase. Do not register those capabilities in the first persistent
+recipe or mistake coding subagents for persistent agents. Existing native coding
+delegation remains unchanged in its own recipe. No future persistent child-join
+milestone is selected; the preference to manage coding sessions is later design.
 
 Dream is a fixed internal agent context in this same core, with its own stable
 agent/task identities and explicit source references. It is not an invocation
-of the currently non-durable subagent join machinery. Admission of a Dream run
-does not make the originating coding task wait for it or depend on its success.
+of the coding subagent machinery. Admission of a Dream run does not make the
+originating foreground task wait for it or depend on its success.
 This permits AD-2 without first implementing recoverable arbitrary agent trees.
 
 #### 3. Storage and the actual commit unit
@@ -553,8 +545,8 @@ small upstream extensions against the required commit contract. If a separate
 the exact data needed to resume it must reside in the same **agent-log append**.
 Session listing metadata is derived. No invariant in the first slice requires
 an atomic write across an agent log, another agent log and the session log.
-Later joins refer to an already committed child's result before committing the
-parent's acceptance; an interrupted join is reconciled by identity.
+The underlying Rig session is a storage/execution container, not a coding session
+that this first-phase persistent agent can create or manage.
 
 **Conditional fallback only:** the following framing/layout is selected only if
 D0 establishes that upstream storage plus a bounded extension cannot supply the
@@ -579,11 +571,13 @@ the committed logical log. Preserve `Store`'s expected-length conflict behavior
 and `Files` atomic-replacement contract. Do not buffer a successful Store call
 and pretend it has already produced a durable receipt.
 
-After writing a complete frame, synchronize the journal to the OS durability
-boundary before returning success. A receipt identifies the log's committed
-length, state revision when present, and journal sequence. Publish the new
-read view only after this succeeds. Referenced immutable blobs are written and
-synced before the referencing frame. On open, verify framing, checksums,
+Write the complete frame through the backend's process-crash commit boundary
+before returning success; a process-local buffer alone is insufficient. A receipt
+identifies the log's committed length, state revision when present, and journal
+sequence. Publish the new read view only after this succeeds. Referenced immutable
+blobs must be completely written and recoverable after process termination before
+the referencing frame. Disk sync is not an initial requirement; stronger opt-in
+durability needs separate ordering and evidence. On open, verify framing, checksums,
 sequence and expected lengths, then expose only the valid committed prefix to
 Rig. Set aside a final incomplete frame under writer ownership; interior
 corruption or a complete frame with an invalid checksum fails closed.
@@ -604,12 +598,13 @@ execution until it is reopened and reconciled. Preserve the original cause.
 Session listing readers use derived metadata or a consistent committed view.
 This is local storage, without distributed locks or network-filesystem claims.
 
-This design requests synced commits, but process-kill tests do not certify
-power-loss durability. File creation, replacement and directory metadata
-durability need a Windows-specific implementation and evidence. State the
-tested filesystem/platform limits. Start with whole-log reads as Rig already
-uses; measure journal growth, reopen time and sync cost before adding snapshots,
-segmentation, background compaction or group commit. No per-token disk sync.
+The initial guarantee is ordinary process-crash recovery on the tested local
+filesystem. Test incomplete writes and replacement interruption on Windows;
+do not infer OS/power-loss survival from process-kill tests. Existing stronger
+file helpers may be reused, but stronger guarantees require separate acceptance.
+Start with whole-log reads as Rig already uses; measure journal growth, reopen
+time and write cost before adding snapshots, segmentation, background compaction
+or group commit. No per-token disk sync or new durability-profile framework.
 
 #### 4. Binding persistence to Rig execution
 
@@ -699,8 +694,9 @@ safe handlers may be retried under their recorded policy and current permission;
 idempotent handlers require a stable external idempotency key or a verifiable
 receipt. Model retries may incur another request/charge and produce a different
 answer; internal thoughts or an interrupted token stream are not resumed.
-Persist attempt counts and backoff deadlines; the initial model budget is one
-recovery retry before suspension, configurable without weakening tool policy.
+Persist attempt counts and backoff deadlines using applicable Rig/host retry
+controls. No new one-retry default or autonomous-activity budget is selected here;
+additional policy is deferred. Reuse does not weaken the recorded tool replay contract.
 
 Unknown effects may be resolved by reading an authoritative external receipt,
 checking their actual result, or obtaining a user decision. The agent may
@@ -760,7 +756,7 @@ The initial native persona representation is a versioned workspace
 `.vivy/laputa/persona.json`, with
 `schema_version`, `persona_id`, `revision`, `text`, `last_update_id` and source
 references. Laputa exposes read and compare-and-swap update operations. Updates
-validate the expected revision, write/sync a replacement, then atomically publish
+validate the expected revision, write a complete replacement, then atomically publish
 it under an OS writer lock. An interrupted update is reconciled by update ID and
 revision. Tasks record the observed revision, not a second mutable persona copy.
 The exact bytes used by an in-flight model request are part of its checkpoint.
@@ -798,13 +794,16 @@ These policies share an execution engine and must not create two Recap authoriti
 
 The first assistant policy follows mysoul's Recap-only history. Reuse Rig's summary
 facilities with assistant-specific content and publication rules, rather than
-equating Rig's default window compaction with that policy. Consider a Recap refresh
-at completion/wait when uncovered material warrants it and coalesce requests
-against one source boundary. If refresh fails, retain the old Recap and pending
-sources for retry; never advance coverage or discard sources because a summary
+equating Rig's default window compaction with that policy. Schedule asynchronous
+refresh from completed/waiting activity material, coalescing pending sources
+against one source boundary. New turns use the latest committed Recap without
+waiting for that refresh; its coverage may lag. Expose pending/failed update state.
+Recap maintenance is independent of AutoDream and the idle-autonomy switch.
+If refresh fails, retain the old Recap and pending sources for retry; never
+advance coverage or discard sources because a summary
 was merely requested. Do not silently inject those sources as a raw-history
 fallback. If required current context exceeds budget, suspend with a cause.
-A committed coding outcome need not be undone by a failed maintenance summary.
+A committed task outcome need not be undone by a failed maintenance summary.
 There is no separate summary model call on every timer event or tool result.
 
 Keep MemPalace's existing `remember/get/search` API as an independent optional
@@ -820,7 +819,7 @@ the existing facade already exposes these cases. Do not turn all memory failures
 into automatic retries. Corrections use new events with source references.
 
 Memory ingestion can be a small follow-up task: its failure leaves ingestion
-pending without undoing a successfully completed coding task. MemPalace remains
+pending without undoing a successfully completed task. MemPalace remains
 its own storage authority; there is no distributed transaction with the task
 journal and no mirrored memory database. A source ID or partition is not an ACL.
 Worker restart creates a fresh Python namespace and reconnects admitted resources;
@@ -856,9 +855,10 @@ required. If the agent is busy, the wake waits for the normal handoff boundary.
 On startup, enqueue each still-valid overdue one-shot wake once. Replacing or
 cancelling a schedule changes its generation so an old timer cannot revive it.
 Use stored UTC deadlines and recheck wall time after monotonic waits; no cron,
-catch-up burst or distributed scheduling in the first slice. Self-scheduled
-wakeups have a host-configured minimum delay and per-task action/model budget.
-Exhaustion suspends autonomous work with a recorded reason.
+catch-up burst or distributed scheduling in the first slice. Reuse applicable
+Rig/host resource limits and report their outcomes. A new minimum wake interval,
+per-activity budget system and other autonomy mechanisms are deferred, not first
+implementation requirements. Explicit human stop and idle autonomy off remain.
 
 The host must remain running for an on-time wake. A stopped computer/process
 executes overdue work only after restart. A background service, detached daemon,
@@ -924,9 +924,9 @@ must preserve the task checkpoints and required active call pairs.
 | --- | --- |
 | D0: Rig binding and store | One model/tool task through the coding face; observe holds/receipts at actual pinned integration points; reject an incompatible resume and a second writer; retain legacy recipe behavior |
 | D1: execution recovery | Kill before/after intent, after external effect but before result, after result commit but before publication, and after final commit; prove reuse, unknown outcomes, admission deduplication and no duplicate unsafe call |
-| D1: control/failure | Inject append/sync/serialization errors, torn tail and corruption; cancel with late results; introduce new input between two requested tools; inspect valid tool-call/result pairing and worker cleanup |
-| D2: context and memory | Inspect actual requests for persona revisions and Recap-only history with memory disabled. Separately, with memory enabled, verify explicit write/get/search after restart and reconcile repeated/incomplete writes and a missing Python namespace. |
-| D3: wake | Restart before/after a deadline, duplicate callback, replace/cancel deadline, wake while busy, silent outcome and exhausted budget |
+| D1: control/failure | Inject append/serialization errors, torn tail and corruption; cancel with late results; introduce new input between two requested tools; inspect valid call/result pairing and worker cleanup. Exercise failure of reused sync helpers where present, without requiring a new sync mode. No delegation or coding-session orchestration case. |
+| D2: context and memory | Inspect actual requests for persona revisions and Recap-only history with memory disabled, including pending/failed asynchronous updates without blocking new turns or exposing pending raw sources. Separately, with memory enabled, verify explicit write/get/search after restart and reconcile repeated/incomplete writes and a missing Python namespace. |
+| D3: wake | Restart before/after a deadline, duplicate callback, replace/cancel deadline, wake while busy, silent outcome and applicable existing resource-control behavior; no new autonomy policy system |
 | D4: evolution | Evidence collected once; persona and executable Skill candidates validated; background validation admission distinguished from completion, with foreground handoff/cancellation exercised; tested Skill revision automatically adopted and actually called by subsequent work; usage/results returned as new evidence; failed/stale publication preserves the active version; restart and code/persona rollback exercised |
 
 D1-D3 form the first persistent-agent infrastructure loop. D4 closes the agreed
@@ -965,6 +965,9 @@ accepted responsibilities. YAML recipes continue to select compiled components.
 Concrete implementation details and bounded acceptance cases are engineering
 work within this direction; the single-core choice is settled.
 
+The owner's scope clarification separates the new persistent agent from coding
+subagents and coding sessions. Its first phase excludes delegation and coding-session
+management; reuse of a UI/host and tools does not merge those responsibilities.
 Use the current coding face to exercise actual model/tool execution and the
 infrastructure being added, including persistence, task recovery, context,
 persona and memory integration. Record representative failure and cancellation
@@ -1214,9 +1217,10 @@ inspection is not channel compatibility, lifecycle or platform acceptance.
 Separately from the official QQ channel, retain a NapCat QQ interface as a PEN
 capability: an agent's "phone" for actively examining QQ rather than only reacting
 to inbound messages. Initial needs are viewing new messages, ignoring group
-messages or filtering specified groups, reading a selected group's history, and
-distinguishing the owner's identity from outsiders. The agent can choose whether
-to reply when notified; notification hooks are agent-controlled.
+messages or filtering specified groups and reading a selected group's history.
+Owner/outsider differentiation was discussed earlier and is now deferred by the
+owner's scope ruling; it is not an initial implementation gate. The agent can
+choose whether to reply when notified; notification hooks are agent-controlled.
 
 Prefer NapCat/NTQQ's existing data and query interfaces instead of maintaining
 another mirrored QQ-message database in Vivy. MCP is a possible access interface,
@@ -1285,8 +1289,9 @@ chat/task inputs, enter the durable admission/handoff path. Hook-disabled items
 stay available through source browsing or the later inbox without automatically
 requesting an agent decision; ignored groups stay filtered. Closing a hook does
 not cancel an already admitted task or disable direct owner input.
-Resolve owner identity from configured account bindings, not an inbound display
-name or an untrusted claim. Apply the configured group filters at the adapter.
+Retain service participant IDs for routing/correlation. Owner/outsider
+classification and differentiated context policy are deferred. Apply configured
+group filters at the adapter.
 Re-delivery uses stable source IDs when the service supplies them; adapters must
 state limitations when it does not. Outbound sends are explicit effectful
 operations with recorded destination and uncertain-outcome handling, not an
@@ -1507,7 +1512,7 @@ the exact Rust/tool names are not public protocol commitments.
 
 Waiting cancellation detaches the waiter. Explicit job cancellation or cancellation
 of its owning Dream task stops the owned process and fences its result; cancelling
-the originating coding task does not implicitly cancel an independently admitted
+the originating foreground task does not implicitly cancel an independently admitted
 Dream run. A human stop targeting the whole agent activity/workspace also cancels
 its jobs. Returning a job ID ends the submission tool, allowing ordinary handoff.
 An optional wait is bounded; completion is persisted before it becomes one deduped
@@ -1559,10 +1564,11 @@ Use a workspace publication lock shared by manual preparation and evolution:
 2. Commit an adoption intent with a stable update ID and expected active
    publication. Acquire publication ownership; recheck that base, task generation,
    cancellation, validation identity and installation scope.
-3. Write/sync the immutable new publication manifest and its user-owned local
+3. Write the complete immutable new publication manifest and its user-owned local
    validation record before activation, retaining the old publication's record.
-   Then atomically replace/sync the current publication using the platform's
-   verified file contract. This replacement is the activation point.
+   Then atomically replace the current publication using the platform's verified
+   process-crash file contract; existing sync helpers may still be reused. This
+   replacement is the activation point. Stronger power-loss guarantees are separate.
    No affected worker starts from an unvalidated publication.
 4. Commit the adoption result, refresh the existing inventory/instruction view
    and let each worker adopt at a cell boundary for the next newly planned

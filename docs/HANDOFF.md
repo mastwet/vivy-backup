@@ -1,20 +1,34 @@
 # Handoff: continue the independent assembly experiment
 
-## Requirements audit: five rulings pending (2026-10-31)
+## Requirements audit: owner rulings accepted (2026-10-31)
 
-The owner requested a check for other assumptions like the Recap/recall conflation.
-Read the [requirements audit](DESIGN.md#requirements-audit-and-proposed-rulings-2026-10-31).
-It corrects residual mandatory-recall wording, the historical compulsory
-Python/APIX-to-Rig bridge and unqualified external-event handoff wording against
-already explicit requirements. No runtime code changed.
+Read the [accepted rulings](DESIGN.md#requirements-audit-and-owner-rulings-2026-10-31).
+The owner accepts ordinary process-crash recovery as the first guarantee and
+asynchronous Recap publication using the latest committed version. Pending sources
+are retained, not injected, and summary lag does not block new turns. Stronger
+sync is a later option, not a first-phase gate.
 
-Five recommendations remain pending owner review: initial process-crash versus
-synced durability, Recap freshness versus asynchronous publication, first-slice
-delegation/concurrency scope, explicit resource-limit policy, and owner/outsider
-context sharing. Do not record these as accepted decisions or relax the D0 gate
-because of this audit. Existing Rig patches and evidence remain applicable; even
-a process-crash-only target still needs complete checkpoint/result ordering and
-required-state validation. Source inspection is not another runtime test.
+The owner corrects the delegation comparison: the persistent agent is new, with
+its own lifecycle on the shared Vivy/Rig core. Coding subagents are a separate
+facility. First-phase scope excludes persistent delegation and coding-session
+creation/management; do not add a child-join milestone to catch up with coding.
+The existing coding face can validate shared host/tool infrastructure without
+making coding sessions part of the deliverable. Later preference: the persistent
+agent manages coding sessions rather than directly managing their subagents.
+That preference is not an API/implementation lock. AD-2's separate internal Dream
+context and validation jobs do not become general subagent delegation.
+
+Reuse existing Rig/host autonomy/resource controls where applicable; other
+mechanisms and numeric defaults are deferred. Owner/outsider differentiation and
+role-specific context policy are also deferred, including the earlier audit's
+proposed isolation. Preserve normal event identities and explicit human stop.
+
+DESIGN, the D0 plan and storage proposals now reflect this contract. Existing
+Rig patches and executed evidence remain applicable. Complete checkpoint/result
+ordering and required-state validation are still missing: D0 is not passed merely
+because disk sync is no longer mandatory. Repeat acceptance against the revised
+process-crash target before advancing. This update changes documentation only;
+diff review and `git diff --check` do not establish runtime guarantees.
 
 ## Assistant context clarification (2026-10-31)
 
@@ -66,8 +80,10 @@ tests only, adding no runtime capability. The ordinary `d0-probe` feature keeps 
 original upstream characterizations. The normal D0 report is still about the pinned
 upstream, so it must not claim this local patch has already shipped there.
 
-This patch does not supply synced receipts, final-result gating, required saved-key
-validation or D1. Logging failure is not automatic cancellation of a normal turn.
+This patch does not supply complete checkpoint receipts, final-result gating,
+required saved-key validation or D1. The current target is process-crash recovery;
+stronger synced receipts are later work. Logging failure is not automatic
+cancellation of a normal turn.
 Next is the committed checkpoint/receipt seam, followed by the remaining D0 checks.
 Verification and the baseline Windows test failures are recorded in the
 [session-storage evidence](research/2026-10-27-session-storage.md#rig-fork-saved-serialization-failure-2026-10-31).
@@ -337,8 +353,9 @@ and deferred real-provider gate remain unchanged.
 The owner requested detailed architecture after selecting Plan B. Read the
 [detailed baseline](DESIGN.md#preliminary-detailed-architecture-baseline-2026-10-31)
 within the existing decision document. This entry describes the original
-proposal; the consolidated baseline above supersedes its proposal status,
-custom-Store-first implication and text-only evolution scope.
+proposal; the consolidated baseline and owner rulings above supersede its
+proposal status, custom-Store-first implication, mandatory sync, coding-delegation
+comparison and text-only evolution scope.
 
 The proposed minimum adds a `vivy-durable` plugin to the existing Rig execution
 path. Reuse Rig's logical conversation logs and saved components; a framed
