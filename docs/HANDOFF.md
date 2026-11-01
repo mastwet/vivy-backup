@@ -1,5 +1,15 @@
 # Handoff: continue the independent assembly experiment
 
+## Diva transport boundary checks (2026-11-01)
+
+The desktop branch now distinguishes protocol-version and unsupported-operation
+errors, bounds reflected IDs, preserves pipe-read error causes, and rejects EOF
+without a JSON Lines terminator. Four actual-process boundary tests, the existing
+front smoke and all 34 root workspace tests passed. The plan's progress section
+records reproduction and remaining work. This does not complete M1: type export
+and readiness projection are still pending, as are conversation, desktop hosting,
+management and installer milestones. No desktop repository changes were made.
+
 ## Diva implementation started (2026-11-01)
 
 The owner subsequently authorized implementation. Work is isolated on
