@@ -69,8 +69,12 @@ Windows cannot replace a running executable.
 
 `recipes/persistent-agent.yaml` selects D3 persistent waits and timed wakes, with
 Laputa's six-file core persona and asynchronous Recap-only context on the local
-Rig checkpoint fork. The persona is editable under
-`.vivy/laputa/personas/main/` and, for the desktop, under Settings → Core persona.
+Rig checkpoint fork. The persona is global and editable under
+`<LAPUTA_HOME>/personas/main/` (default `~/.laputa/personas/main/`), and for the
+desktop under Settings → Core persona. On first launch the desktop tests a
+provider, asks once who you are and what your mission is, extracts the six files
+and writes them directly; an unclear description gets a random name and the
+built-in persona.
 Use new D3 sessions; preserve earlier executables and sessions. A live terminal
 or JSON host delivers deadlines; print mode saves the wait and exits. Background
 summary work yields to foreground input; native memory uses explicit tools only.
