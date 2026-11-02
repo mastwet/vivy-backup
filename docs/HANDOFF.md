@@ -1,5 +1,9 @@
 # Handoff: continue the independent assembly experiment
 
+Provider setup now exposes three Rust-owned desktop presets; see the existing
+plan section "Curated provider setup" for defaults and verification. Existing
+user configurations remain authoritative.
+
 ## Diva management and native host continuation (2026-11-02)
 
 The active backend and desktop worktrees remain `.workspace/diva-integration`
